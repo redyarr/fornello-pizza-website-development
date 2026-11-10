@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { bindTableOrder } from '@/lib/floor'
 import { STRINGS, type Strings } from '@/lib/i18n'
 import { getMergedMenu, type Lang, type MenuItem } from '@/lib/menu'
 import { cartTotal, orderQuery, type CartLine, type Mode, type OrderParams, type Pacing, type Selections } from '@/lib/order'
@@ -203,6 +204,9 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
     }
     const updated = [newRecord, ...pastOrders.slice(0, 9)]
     setPastOrders(updated)
+    if (params.mode === 'dine-in' && params.table) {
+      bindTableOrder(params.table, orderRef, lines, cartTotal(lines))
+    }
     try {
       localStorage.setItem('fornello_order_history_v1', JSON.stringify(updated))
     } catch {}

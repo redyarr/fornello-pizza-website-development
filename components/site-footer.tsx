@@ -1,6 +1,6 @@
 'use client'
 
-import { MapPin, MessageCircle, Phone, QrCode } from 'lucide-react'
+import { Bell, MapPin, MessageCircle, Phone, QrCode } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useRef } from 'react'
@@ -82,10 +82,14 @@ export function SiteFooter() {
             <span className="sr-only">Instagram</span>
             <bdi dir="ltr">{SITE.instagramHandle.slice(1)}</bdi>
           </a>
-          <div className="mt-2 flex border-t border-border/50 pt-3">
+          <div className="mt-2 flex flex-wrap items-center gap-4 border-t border-border/50 pt-3">
             <Link href="/qr" className={`${linkClass} text-sm text-muted-foreground`}>
               <QrCode className="size-4 shrink-0" aria-hidden="true" />
               {t.staffQr}
+            </Link>
+            <Link href="/floor" className={`${linkClass} text-sm text-muted-foreground`}>
+              <Bell className="size-4 shrink-0" aria-hidden="true" />
+              {t.waiterFloor}
             </Link>
           </div>
         </div>

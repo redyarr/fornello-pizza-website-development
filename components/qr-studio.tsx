@@ -83,9 +83,14 @@ export function QrStudio() {
             <ArrowLeft className="size-4" aria-hidden="true" />
             Back to the menu
           </Link>
-          <Link href="/admin" className="text-sm font-medium text-primary hover:underline">
-            Staff Menu Studio →
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link href="/floor" className="text-sm font-medium text-accent hover:underline">
+              Live Floor Monitor →
+            </Link>
+            <Link href="/admin" className="text-sm font-medium text-primary hover:underline">
+              Staff Menu Studio →
+            </Link>
+          </div>
         </div>
         <h1 className="mt-6 font-display text-4xl font-medium tracking-wide uppercase">Table QR Studio</h1>
         <p className="mt-2 max-w-xl leading-relaxed text-muted-foreground">

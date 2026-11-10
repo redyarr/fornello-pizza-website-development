@@ -2,6 +2,7 @@
 
 import {
   ArrowLeft,
+  Bell,
   Check,
   CheckCircle2,
   Copy,
@@ -588,6 +589,13 @@ export function MenuManager() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/floor"
+            className="flex h-9 items-center gap-1.5 rounded-full border border-accent/60 bg-accent/15 px-3 text-xs font-semibold text-accent hover:bg-accent hover:text-accent-foreground transition-colors"
+          >
+            <Bell className="size-3.5" aria-hidden="true" />
+            <span>{t.waiterFloor}</span>
+          </Link>
           <button
             type="button"
             onClick={() => setIsSecurityOpen(true)}

@@ -1,9 +1,12 @@
 'use client'
 
-import { ArrowLeft, Bell, Check, CheckCircle2, Printer } from 'lucide-react'
+import { ArrowLeft, Bell, Check, CheckCircle2, Printer, QrCode } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
 import { useState } from 'react'
+import { encodeTableSyncPayload } from '@/lib/floor'
 import { getItem } from '@/lib/menu'
 import { cartTotal, describeSelections, formatIQD, lineTotal, needsPacing, padTable, prepEstimate } from '@/lib/order'
+import { playBellChime } from '@/lib/sound'
 import { useOrder } from './order-provider'
 import { Sheet } from './sheet'
 import { Tricolor } from './tricolor'
@@ -67,6 +70,17 @@ export function WaiterTicket({ open, time, onBack, onFinish }: WaiterTicketProps
             </p>
             {!dineIn && name ? <p className="text-2xl font-semibold">{name}</p> : null}
             {!dineIn ? <p className="text-sm">{t.readyIn(low, high)}</p> : null}
+
+            {dineIn && table ? (
+              <div className="my-2 flex flex-col items-center gap-1 rounded-2xl bg-white p-3 shadow-md print:hidden">
+                <QRCodeSVG
+                  value={encodeTableSyncPayload(table, orderRef, lines, cartTotal(lines))}
+                  size={120}
+                  level="M"
+                />
+                <span className="font-mono text-[10px] text-zinc-700">Scan for live floor monitor</span>
+              </div>
+            ) : null}
             {dineIn && needsPacing(lines) ? (
               <p className="rounded-full bg-background px-4 py-1.5 text-sm font-medium text-foreground">
                 {`${t.coffeeService}: ${t.pacing[pacing]}`}

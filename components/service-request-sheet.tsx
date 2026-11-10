@@ -2,8 +2,10 @@
 
 import { Bell, Check, Droplets, MessageCircle, Receipt, UtensilsCrossed, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { acknowledgeTableCall, dispatchTableCall } from '@/lib/floor'
 import { SITE } from '@/lib/i18n'
 import { padTable } from '@/lib/order'
+import { playBellChime } from '@/lib/sound'
 import { cn } from '@/lib/utils'
 import { useOrder } from './order-provider'
 import { Sheet } from './sheet'
@@ -35,13 +37,20 @@ export function ServiceRequestSheet({
   }, [activeRequest])
 
   const handleSelectService = (type: ServiceType) => {
+    playBellChime()
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate([40, 70, 40])
+    }
+    if (table) {
+      dispatchTableCall(table, type)
     }
     setActiveRequest(type)
   }
 
   const handleDismiss = () => {
+    if (table) {
+      acknowledgeTableCall(table)
+    }
     setActiveRequest(null)
     onClose()
   }

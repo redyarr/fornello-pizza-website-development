@@ -28,16 +28,20 @@
 │   ├── order-provider.tsx      # React Context holding cart, toasts, order history & URL sync
 │   ├── order-sheet.tsx         # Cart drawer with item re-edit, past orders, WhatsApp & ticket
 │   ├── qr-studio.tsx           # Printable QR generator for tables 1–25 and takeaway counter
+│   ├── service-request-sheet.tsx # Dine-in table service request & pulsating table floor beacon
 │   ├── sheet.tsx               # Reusable modal/bottom-sheet primitive using native <dialog>
 │   ├── site-footer.tsx         # Multilingual footer with Google Maps link & 5-tap stealth trigger
-│   ├── site-header.tsx         # Sticky header with brand, dining mode pill & language toggle
+│   ├── site-header.tsx         # Sticky header with brand, dining mode pill, call waiter & lang toggle
 │   ├── tricolor.tsx            # Italian tricolor accent bar (Basil, White, Terracotta)
+│   ├── waiter-floor.tsx        # Real-time 25-table monitor, active bills, service calls & mesh sync
 │   └── waiter-ticket.tsx       # High-contrast card with order ref, waiter call & thermal print
 ├── lib/                        # Pure business logic, types, data schemas, i18n
-│   ├── auth.ts                 # PBKDF2 (100k rounds) + Keyfile Token Auth + Lockout shield
+│   ├── auth.ts                 # Hardware Passkeys, RFC 6238 TOTP, 256-bit Keycard, PBKDF2 (100k)
+│   ├── floor.ts                # Real-time table mesh state, calls, bills & portable QR encoder
 │   ├── i18n.ts                 # Bilingual dictionaries (en, ckb) & shop constants (SITE)
 │   ├── menu.ts                 # Menu item catalogue, modifier groups, add-on pricing, overrides
 │   ├── order.ts                # Calculation algorithms, receipt formatting, URL query serialization
+│   ├── sound.ts                # Client-side Web Audio bell chime & success sound synthesis
 │   └── utils.ts                # Utility cn() combining clsx and tailwind-merge
 └── public/                     # Static media assets (optimized PNGs/SVGs)
 ```
