@@ -317,6 +317,14 @@ export function MenuManager() {
           const next: MenuStoreData = {
             customItems: Array.isArray(parsed.customItems) ? parsed.customItems : [],
             overrides: typeof parsed.overrides === 'object' && parsed.overrides ? parsed.overrides : {},
+            modifierGroups:
+              typeof parsed.modifierGroups === 'object' && parsed.modifierGroups
+                ? parsed.modifierGroups
+                : undefined,
+            categoryOverrides:
+              typeof parsed.categoryOverrides === 'object' && parsed.categoryOverrides
+                ? parsed.categoryOverrides
+                : undefined,
           }
           setMenuData(next)
           saveStoredMenuData(next)
