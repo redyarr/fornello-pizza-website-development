@@ -242,16 +242,23 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
     }
   }, [])
 
-  // Restore cart scoped strictly to this phone's deviceId
+  // Restore cart scoped strictly to this phone's deviceId (auto-expires after 2 hours so returning next day starts fresh)
   useEffect(() => {
     if (deviceId === 'DEV-INIT') return
     try {
       const saved = localStorage.getItem(`fornello_cart_${deviceId}`)
       if (saved) {
         const parsed = JSON.parse(saved)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setLines(parsed)
+        if (parsed && typeof parsed === 'object' && Array.isArray(parsed.lines)) {
+          const ageMs = Date.now() - (parsed.updatedAt || 0)
+          if (ageMs < 2 * 60 * 60 * 1000 && parsed.lines.length > 0) {
+            setLines(parsed.lines)
+          } else {
+            localStorage.removeItem(`fornello_cart_${deviceId}`)
+            setLines([])
+          }
         } else {
+          localStorage.removeItem(`fornello_cart_${deviceId}`)
           setLines([])
         }
       } else {
@@ -264,11 +271,18 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
     }
   }, [deviceId])
 
-  // Persist cart to localStorage scoped strictly to this phone's deviceId
+  // Persist cart to localStorage scoped strictly to this phone's deviceId with timestamp
   useEffect(() => {
     if (!hasHydratedCartRef.current || deviceId === 'DEV-INIT') return
     try {
-      localStorage.setItem(`fornello_cart_${deviceId}`, JSON.stringify(lines))
+      if (lines.length === 0) {
+        localStorage.removeItem(`fornello_cart_${deviceId}`)
+      } else {
+        localStorage.setItem(
+          `fornello_cart_${deviceId}`,
+          JSON.stringify({ updatedAt: Date.now(), lines }),
+        )
+      }
     } catch {
       // ignore
     }
