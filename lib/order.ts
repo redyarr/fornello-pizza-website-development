@@ -37,19 +37,33 @@ export function orderQuery({ mode, table, lang }: OrderParams): string {
 }
 
 export function defaultSelections(item: MenuItem): Selections {
-  return Object.fromEntries(item.groups.map((id) => [id, [...(MODIFIER_GROUPS[id].defaults ?? [])]]))
+  return Object.fromEntries(
+    item.groups.map((id) => {
+      const group = MODIFIER_GROUPS[id]
+      if (!group || group.options.length === 0) return [id, []]
+      const validDefaults = (group.defaults ?? []).filter((d) => group.options.some((o) => o.id === d))
+      if (validDefaults.length === 0 && group.min === 1 && group.max === 1) {
+        return [id, [group.options[0].id]]
+      }
+      return [id, validDefaults]
+    }),
+  )
 }
 
 export function isComplete(item: MenuItem, selections: Selections): boolean {
   return item.groups.every((id) => {
-    const count = selections[id]?.length ?? 0
-    return count >= MODIFIER_GROUPS[id].min && count <= MODIFIER_GROUPS[id].max
+    const group = MODIFIER_GROUPS[id]
+    if (!group || group.options.length === 0) return true
+    const count = (selections[id] ?? []).filter((optId) => group.options.some((o) => o.id === optId)).length
+    const effectiveMin = Math.min(group.min, group.options.length)
+    return count >= effectiveMin && count <= group.max
   })
 }
 
 export function unitPrice(item: MenuItem, selections: Selections): number {
   return item.groups.reduce((sum, id) => {
     const group = MODIFIER_GROUPS[id]
+    if (!group) return sum
     const picked = selections[id] ?? []
     return sum + group.options.filter((o) => picked.includes(o.id)).reduce((s, o) => s + o.price, 0)
   }, item.price)
@@ -58,14 +72,16 @@ export function unitPrice(item: MenuItem, selections: Selections): number {
 export function describeSelections(item: MenuItem, selections: Selections, lang: Lang): string[] {
   return item.groups.flatMap((id) => {
     const group = MODIFIER_GROUPS[id]
-    const picked = selections[id] ?? []
+    if (!group || group.options.length === 0) return []
+    const picked = (selections[id] ?? []).filter((optId) => group.options.some((o) => o.id === optId))
     if (picked.length === 0) return []
+    const validDefaults = (group.defaults ?? []).filter((d) => group.options.some((o) => o.id === d))
     const isDefault =
-      group.defaults?.length === picked.length && group.defaults.every((d) => picked.includes(d))
+      validDefaults.length === picked.length && validDefaults.every((d) => picked.includes(d))
     if (isDefault && !group.alwaysShow) return []
-    const labels = group.options.filter((o) => picked.includes(o.id)).map((o) => o.label[lang])
+    const labels = group.options.filter((o) => picked.includes(o.id)).map((o) => o.label[lang] || o.label.en)
     const separator = lang === 'ckb' ? '، ' : ', '
-    return [`${group.label[lang]}: ${labels.join(separator)}`]
+    return [`${group.label[lang] || group.label.en}: ${labels.join(separator)}`]
   })
 }
 

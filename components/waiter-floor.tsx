@@ -285,7 +285,7 @@ export function WaiterFloor() {
     const isLocked = lockoutRemaining > 0 || lockout.permanentlyLocked
 
     return (
-      <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 py-12">
+      <main lang={lang} dir={lang === 'ckb' ? 'rtl' : 'ltr'} className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 py-12">
         <div className="flex flex-col items-center gap-6 rounded-3xl bg-card p-7 text-center border border-border shadow-2xl">
           <div className="grid size-14 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-md">
             <Lock className="size-7" aria-hidden="true" />
@@ -450,7 +450,7 @@ export function WaiterFloor() {
   // AUTHENTICATED LIVE WAITER FLOOR SCREEN
   // -------------------------------------------------------------
   return (
-    <main className="mx-auto min-h-dvh max-w-6xl px-4 py-8 pb-32">
+    <main lang={lang} dir={lang === 'ckb' ? 'rtl' : 'ltr'} className="mx-auto min-h-dvh max-w-6xl px-4 py-8 pb-32">
       {/* Top Bar */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>

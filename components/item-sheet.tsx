@@ -90,17 +90,19 @@ function ItemForm({
       <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 py-5 [&>*]:shrink-0">
         {item.groups.map((groupId) => {
           const group = MODIFIER_GROUPS[groupId]
+          if (!group || group.options.length === 0) return null
           const picked = selections[group.id] ?? []
           const single = group.max === 1
+          const effectiveMin = Math.min(group.min, group.options.length)
           const hint = single
             ? t.pickOne
-            : group.min === group.max
+            : effectiveMin === group.max
               ? t.chooseExactly(group.max, picked.length)
               : t.upTo(group.max)
           return (
             <fieldset key={group.id} className="flex flex-col gap-3">
               <legend className="flex w-full items-baseline justify-between gap-3">
-                <span className="font-display text-lg tracking-wide uppercase">{group.label[lang]}</span>
+                <span className="font-display text-lg tracking-wide uppercase">{group.label[lang] || group.label.en}</span>
                 <span className="text-xs text-muted-foreground">{hint}</span>
               </legend>
               <div className={cn('grid gap-2', group.options.length > 3 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1')}>
@@ -119,7 +121,7 @@ function ItemForm({
                         onChange={() => toggle(group, option.id)}
                         className="sr-only"
                       />
-                      <span className="font-medium">{option.label[lang]}</span>
+                      <span className="font-medium">{option.label[lang] || option.label.en}</span>
                       {option.price > 0 ? (
                         <span className="shrink-0 text-xs tabular-nums">{`+${option.price.toLocaleString('en-US')}`}</span>
                       ) : null}

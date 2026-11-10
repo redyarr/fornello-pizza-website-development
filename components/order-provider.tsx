@@ -53,6 +53,7 @@ type OrderContextValue = {
   setLang: (lang: Lang) => void
   setMode: (mode: Mode) => void
   setTable: (table: number | null) => void
+  simulateTableScan: (table: number | null) => void
   addLine: (item: MenuItem, selections: Selections, qty: number, notes?: string) => void
   updateLine: (uid: string, selections: Selections, qty: number, notes?: string) => void
   setQty: (uid: string, qty: number) => void
@@ -355,6 +356,27 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
     } catch {}
   }
 
+  const simulateTableScan = (targetTable: number | null) => {
+    if (targetTable === null || targetTable < 1 || targetTable > 25) {
+      setVerifiedTable(null)
+      try {
+        sessionStorage.removeItem('fornello_table_verified_v1')
+      } catch {}
+      const next: OrderParams = { ...params, mode: 'takeaway', table: null }
+      setParams(next)
+      window.history.replaceState(null, '', orderQuery(next))
+      return
+    }
+    const sig = generateTableSignature(targetTable)
+    setVerifiedTable(targetTable)
+    try {
+      sessionStorage.setItem('fornello_table_verified_v1', JSON.stringify({ table: targetTable, sig }))
+    } catch {}
+    const next: OrderParams = { ...params, mode: 'dine-in', table: targetTable }
+    setParams(next)
+    window.history.replaceState(null, '', orderQuery(next))
+  }
+
   const isTableVerified = verifiedTable !== null && params.table === verifiedTable && params.mode === 'dine-in'
 
   const value: OrderContextValue = {
@@ -391,6 +413,7 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
       }
       update({ table: verifiedTable, mode: 'dine-in' })
     },
+    simulateTableScan,
     addLine,
     updateLine,
     setQty,
@@ -413,23 +436,27 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
       <div id="top" lang={params.lang} dir={params.lang === 'ckb' ? 'rtl' : 'ltr'} className="min-h-dvh">
         {children}
         {toast ? (
-          <aside
-            role="status"
-            aria-live="polite"
-            className="fixed top-16 start-1/2 z-50 -translate-x-1/2 rounded-full border border-primary/40 bg-card/95 px-5 py-2.5 text-center text-sm font-medium text-foreground shadow-2xl backdrop-blur animate-in fade-in-0 slide-in-from-top-4 duration-200"
-          >
-            {toast}
-          </aside>
+          <div className="pointer-events-none fixed inset-x-0 top-16 z-50 flex justify-center px-4">
+            <aside
+              role="status"
+              aria-live="polite"
+              className="pointer-events-auto w-fit max-w-md rounded-2xl border border-primary/50 bg-card/95 px-5 py-3 text-center text-sm leading-relaxed font-medium text-foreground shadow-2xl backdrop-blur-md animate-in fade-in-0 slide-in-from-top-4 duration-200"
+            >
+              {toast}
+            </aside>
+          </div>
         ) : null}
         {isOffline ? (
-          <aside
-            role="status"
-            aria-live="polite"
-            className="fixed bottom-20 start-1/2 z-40 -translate-x-1/2 flex items-center gap-2 rounded-full border border-amber-600/40 bg-amber-500/90 text-amber-950 px-4 py-1.5 text-xs font-semibold shadow-lg backdrop-blur"
-          >
-            <span className="size-2 rounded-full bg-amber-950 animate-pulse" />
-            <span>{params.lang === 'ckb' ? 'دۆخی ئۆفلاین · مینیو و داواکاری بەردەستە' : 'Offline Mode · Menu & Ordering Active'}</span>
-          </aside>
+          <div className="pointer-events-none fixed inset-x-0 bottom-20 z-40 flex justify-center px-4">
+            <aside
+              role="status"
+              aria-live="polite"
+              className="pointer-events-auto flex w-fit max-w-md items-center gap-2 rounded-full border border-amber-600/40 bg-amber-500/95 px-4 py-1.5 text-xs font-semibold text-amber-950 shadow-lg backdrop-blur"
+            >
+              <span className="size-2 shrink-0 rounded-full bg-amber-950 animate-pulse" />
+              <span>{params.lang === 'ckb' ? 'دۆخی ئۆفلاین · مینیۆ و داواکردن بەردەستە' : 'Offline Mode · Menu & Ordering Active'}</span>
+            </aside>
+          </div>
         ) : null}
       </div>
     </OrderContext.Provider>

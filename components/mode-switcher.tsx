@@ -1,6 +1,7 @@
 'use client'
 
-import { Lock, Share2, ShoppingBag, Utensils } from 'lucide-react'
+import { FlaskConical, Lock, QrCode, Share2, ShoppingBag, Utensils } from 'lucide-react'
+import { useState } from 'react'
 import { SITE } from '@/lib/i18n'
 import { padTable, type Mode } from '@/lib/order'
 import { buildVerifiedTableUrl } from '@/lib/table-token'
@@ -12,8 +13,12 @@ const MODES: { id: Mode; Icon: typeof Utensils }[] = [
   { id: 'takeaway', Icon: ShoppingBag },
 ]
 
-export function ModeSwitcher({ id: _id }: { id: string }) {
-  const { lang, mode, table, isTableVerified, setMode, t, showToast } = useOrder()
+const IS_DEV = process.env.NODE_ENV === 'development'
+
+export function ModeSwitcher({ id }: { id: string }) {
+  const { lang, mode, table, verifiedTable, isTableVerified, setMode, simulateTableScan, t, showToast } = useOrder()
+  const [showQrHint, setShowQrHint] = useState(false)
+  const hasVerifiedTable = Boolean(verifiedTable || (table && isTableVerified))
 
   const handleShareTable = async () => {
     if (!table || typeof window === 'undefined') return
@@ -35,10 +40,17 @@ export function ModeSwitcher({ id: _id }: { id: string }) {
   }
 
   const handleModeClick = (modeId: Mode) => {
-    if (modeId === 'dine-in' && !isTableVerified && !table) {
-      showToast(t.dineInQrOnly)
+    if (modeId === 'dine-in' && !hasVerifiedTable) {
+      if (IS_DEV) {
+        // In developer mode, immediately simulate scanning Table 01 so testing is 1-click!
+        simulateTableScan(1)
+        setShowQrHint(false)
+        return
+      }
+      setShowQrHint(true)
       return
     }
+    setShowQrHint(false)
     setMode(modeId)
   }
 
@@ -47,11 +59,11 @@ export function ModeSwitcher({ id: _id }: { id: string }) {
       <div
         role="radiogroup"
         aria-label={t.orderType}
-        className="grid grid-cols-2 gap-1 rounded-full border border-border bg-background/70 p-1"
+        className="grid grid-cols-2 gap-1.5 rounded-full border border-border bg-background/80 p-1.5 backdrop-blur-xs"
       >
         {MODES.map(({ id: modeId, Icon }) => {
-          const isSelected = mode === modeId
-          const isDineInDisabled = modeId === 'dine-in' && !isTableVerified && !table
+          const isSelected = mode === modeId && !(modeId === 'takeaway' && showQrHint)
+          const isHintActive = modeId === 'dine-in' && showQrHint && !hasVerifiedTable
 
           return (
             <button
@@ -61,18 +73,18 @@ export function ModeSwitcher({ id: _id }: { id: string }) {
               aria-checked={isSelected}
               onClick={() => handleModeClick(modeId)}
               className={cn(
-                'flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                'flex min-h-11 items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                 isSelected
-                  ? 'bg-primary text-primary-foreground'
-                  : isDineInDisabled
-                    ? 'text-muted-foreground/60 hover:text-foreground'
-                    : 'text-foreground hover:bg-foreground/10',
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : isHintActive
+                    ? 'border border-primary/50 bg-primary/15 text-primary'
+                    : 'text-foreground/85 hover:bg-foreground/10 hover:text-foreground',
               )}
             >
-              <Icon className="size-4" aria-hidden="true" />
-              <span>{modeId === 'dine-in' ? t.dineIn : t.takeaway}</span>
-              {modeId === 'dine-in' && table && isTableVerified ? (
-                <span className="grid size-4 place-items-center rounded-full bg-emerald-500/20 text-emerald-300">
+              <Icon className="size-4 shrink-0" aria-hidden="true" />
+              <span className="truncate">{modeId === 'dine-in' ? t.dineIn : t.takeaway}</span>
+              {modeId === 'dine-in' && hasVerifiedTable ? (
+                <span className="grid size-4 shrink-0 place-items-center rounded-full bg-emerald-500/20 text-emerald-400">
                   <Lock className="size-2.5" aria-hidden="true" />
                 </span>
               ) : null}
@@ -81,46 +93,95 @@ export function ModeSwitcher({ id: _id }: { id: string }) {
         })}
       </div>
 
-      {mode === 'dine-in' && table ? (
-        <div className="flex flex-col gap-2 rounded-2xl border border-primary/30 bg-primary/10 p-3.5">
-          <div className="flex items-center justify-between gap-2">
+      {showQrHint && !hasVerifiedTable ? (
+        <div className="flex items-start gap-3 rounded-2xl border border-primary/40 bg-primary/10 p-3.5 text-sm leading-relaxed text-foreground animate-in fade-in-0 slide-in-from-top-1 duration-150">
+          <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/20 text-primary">
+            <QrCode className="size-5" aria-hidden="true" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-primary">{t.scanPlacardHint}</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground sm:text-sm">{t.dineInQrOnly}</p>
+          </div>
+        </div>
+      ) : mode === 'dine-in' && table ? (
+        <div className="flex flex-col gap-2.5 rounded-2xl border border-primary/35 bg-primary/10 p-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2.5">
-              <span className="grid size-7 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm">
-                <Lock className="size-3.5" aria-hidden="true" />
+              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-xs">
+                <Lock className="size-4" aria-hidden="true" />
               </span>
               <div>
-                <p className="font-display text-base font-semibold uppercase tracking-wide">
+                <p className="font-display text-base font-semibold tracking-wide uppercase">
                   {`${t.table} ${padTable(table)}`}
                 </p>
-                <p className="text-[11px] font-medium text-emerald-400">{t.tableVerifiedBadge}</p>
+                <p className="text-xs font-medium text-emerald-400">{t.tableVerifiedBadge}</p>
               </div>
             </div>
             <button
               type="button"
               onClick={handleShareTable}
-              className="flex h-8 items-center gap-1.5 rounded-full border border-primary/40 bg-background/70 px-2.5 text-xs font-medium hover:bg-background transition-colors"
+              className="flex h-9 items-center gap-1.5 rounded-full border border-primary/40 bg-background/70 px-3 text-xs font-semibold hover:bg-background transition-colors"
               title={t.shareTable}
             >
               <Share2 className="size-3.5 text-primary" aria-hidden="true" />
-              <span className="text-[11px] font-semibold">{t.shareTable}</span>
+              <span>{t.shareTable}</span>
             </button>
           </div>
-          <p className="text-[11px] leading-relaxed text-muted-foreground border-t border-primary/20 pt-2">
+          <p className="border-t border-primary/20 pt-2 text-xs leading-relaxed text-muted-foreground">
             {t.tableChangeHint}
           </p>
         </div>
-      ) : mode === 'dine-in' && !table ? (
-        <div className="rounded-2xl border border-border bg-secondary/40 p-3.5 text-xs leading-relaxed text-muted-foreground">
-          <p className="font-medium text-foreground">{t.dineIn}</p>
-          <p className="mt-1">{t.dineInQrOnly}</p>
-        </div>
       ) : (
-        <div className="rounded-2xl border border-border bg-secondary/40 p-3.5 text-xs leading-relaxed text-muted-foreground">
-          <p className="font-medium text-foreground">{t.takeaway}</p>
-          <p className="mt-1">{t.pickupAtCounter}</p>
-          {!table ? <p className="mt-1 text-[11px] text-primary">{t.dineInNoticeOnline}</p> : null}
-        </div>
+        <p className="px-1 text-sm leading-relaxed text-muted-foreground">{t.pickupAtCounter}</p>
       )}
+
+      {IS_DEV ? (
+        <div className="flex flex-col gap-2 rounded-2xl border border-dashed border-amber-500/40 bg-amber-500/10 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <label htmlFor={`${id}-dev-sim`} className="flex items-center gap-1.5 text-xs font-semibold text-amber-300">
+              <FlaskConical className="size-3.5 shrink-0" aria-hidden="true" />
+              <span>{lang === 'ckb' ? 'دۆخی گەشەپێدەر · تاقیکردنەوەی مێزەکان' : 'Dev Mode · Simulate Table QR'}</span>
+            </label>
+            <select
+              id={`${id}-dev-sim`}
+              value={mode === 'dine-in' && table ? String(table) : ''}
+              onChange={(e) => {
+                const val = e.target.value
+                simulateTableScan(val ? Number(val) : null)
+                setShowQrHint(false)
+              }}
+              className="h-8 rounded-full border border-amber-500/40 bg-background px-3 text-xs font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+            >
+              <option value="">{lang === 'ckb' ? 'سەفەری (ماڵەوە / دەرەوە)' : 'Takeaway (Home / Outside)'}</option>
+              {Array.from({ length: SITE.tableCount }, (_, i) => i + 1).map((n) => (
+                <option key={n} value={n}>
+                  {`${t.table} ${padTable(n)}`}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="no-scrollbar flex items-center gap-1 overflow-x-auto pt-0.5">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => {
+                  simulateTableScan(n)
+                  setShowQrHint(false)
+                }}
+                className={cn(
+                  'h-7 shrink-0 rounded-full px-2.5 text-xs font-semibold tabular-nums transition-colors',
+                  mode === 'dine-in' && table === n
+                    ? 'bg-amber-400 text-amber-950'
+                    : 'border border-amber-500/30 bg-background/60 text-amber-200 hover:bg-amber-500/20',
+                )}
+              >
+                {padTable(n)}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

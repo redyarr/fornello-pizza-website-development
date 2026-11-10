@@ -30,14 +30,16 @@ export function Sheet({ open, onClose, label, variant = 'sheet', children }: She
         if (event.target === ref.current) onClose()
       }}
       className={cn(
-        'fixed inset-0 m-0 w-full max-w-none overflow-hidden p-0 backdrop:bg-black/70 open:animate-in open:fade-in-0 open:duration-200 motion-reduce:animate-none',
+        'fixed z-50 overflow-hidden p-0 backdrop:bg-black/75 backdrop:backdrop-blur-xs open:animate-in open:fade-in-0 open:duration-200 motion-reduce:animate-none',
         variant === 'sheet' &&
-          'mt-auto max-h-[92dvh] rounded-t-3xl bg-card text-card-foreground open:slide-in-from-bottom-8 sm:m-auto sm:max-w-lg sm:rounded-3xl',
-        variant === 'full' && 'h-dvh max-h-none bg-foreground text-background',
+          'inset-x-0 bottom-0 top-auto mx-auto my-0 h-fit max-h-[90dvh] w-full max-w-lg rounded-t-3xl border border-border/60 bg-card text-card-foreground shadow-2xl open:slide-in-from-bottom-6 sm:inset-0 sm:my-auto sm:max-h-[85dvh] sm:w-[calc(100%-2rem)] sm:rounded-3xl',
+        variant === 'full' && 'inset-0 m-0 h-dvh max-h-none w-full max-w-none bg-foreground text-background',
       )}
     >
       {open ? (
-        <div className={cn('flex flex-col', variant === 'sheet' ? 'max-h-[92dvh]' : 'h-dvh')}>{children}</div>
+        <div className={cn('flex flex-col', variant === 'sheet' ? 'max-h-[90dvh] sm:max-h-[85dvh]' : 'h-dvh')}>
+          {children}
+        </div>
       ) : null}
     </dialog>
   )

@@ -72,9 +72,19 @@
   body {
     @apply bg-background font-sans text-foreground;
   }
-  /* Arabic-script letters must stay joined: tracking and uppercase break Kurdish text. */
+  /* Arabic-script letters must stay joined: tracking and uppercase break Kurdish text, and Kurdish font must lead the stack. */
   :lang(ckb) {
+    font-family: var(--font-arabic), var(--font-body), ui-sans-serif, system-ui, sans-serif;
     letter-spacing: 0 !important;
+  }
+  :lang(ckb) .font-display {
+    font-family: var(--font-arabic), var(--font-display-latin), ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: 0 !important;
+    line-height: 1.35;
+  }
+  :lang(en).font-display,
+  :lang(ckb) :lang(en).font-display {
+    font-family: var(--font-display-latin), var(--font-arabic), ui-sans-serif, system-ui, sans-serif;
   }
   @media (prefers-reduced-motion: reduce) {
     html {

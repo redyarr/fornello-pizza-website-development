@@ -194,71 +194,73 @@ export function OrderSheet({ open, onClose, onShowTicket, onOrderPlaced }: Order
         ) : null}
 
         {mode === 'takeaway' && lines.length > 0 ? (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             <div className="flex items-start gap-3 rounded-xl bg-background/50 px-4 py-3">
               <Clock className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
               <div>
                 <p className="font-medium">{t.readyIn(low, high)}</p>
-                <p className="text-sm text-muted-foreground">{t.estimateNote}</p>
+                <p className="text-xs text-muted-foreground sm:text-sm">{t.estimateNote}</p>
               </div>
             </div>
-            <div className="flex flex-col gap-2">
-              <label htmlFor="pickup-name" className="text-sm font-medium">
-                {t.nameLabel}
-              </label>
-              <input
-                id="pickup-name"
-                type="text"
-                autoComplete="given-name"
-                maxLength={40}
-                value={customerName}
-                onChange={(event) => order.setCustomerName(event.target.value)}
-                placeholder={t.namePlaceholder}
-                className="h-12 rounded-xl border border-input bg-background/50 px-4 text-base placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label htmlFor="pickup-phone" className="text-sm font-medium">
-                {t.customerPhone}
-              </label>
-              <input
-                id="pickup-phone"
-                type="tel"
-                autoComplete="tel"
-                maxLength={20}
-                value={customerPhone}
-                onChange={(event) => order.setCustomerPhone(event.target.value)}
-                placeholder={t.customerPhonePlaceholder}
-                className="h-12 rounded-xl border border-input bg-background/50 px-4 text-base placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="pickup-name" className="text-xs font-medium text-muted-foreground">
+                  {t.nameLabel}
+                </label>
+                <input
+                  id="pickup-name"
+                  type="text"
+                  autoComplete="given-name"
+                  maxLength={40}
+                  value={customerName}
+                  onChange={(event) => order.setCustomerName(event.target.value)}
+                  placeholder={t.namePlaceholder}
+                  className="h-11 rounded-xl border border-input bg-background/50 px-3.5 text-sm placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="pickup-phone" className="text-xs font-medium text-muted-foreground">
+                  {t.customerPhone}
+                </label>
+                <input
+                  id="pickup-phone"
+                  type="tel"
+                  autoComplete="tel"
+                  maxLength={20}
+                  value={customerPhone}
+                  onChange={(event) => order.setCustomerPhone(event.target.value)}
+                  placeholder={t.customerPhonePlaceholder}
+                  className="h-11 rounded-xl border border-input bg-background/50 px-3.5 text-sm placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                />
+              </div>
             </div>
           </div>
         ) : null}
 
         {lines.length > 0 ? (
-          <>
-            <div className="flex flex-col gap-2">
-              <label htmlFor="order-note" className="text-sm font-medium">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-2">
+              <label htmlFor="order-note" className="text-xs font-medium text-muted-foreground">
                 {t.noteLabel}
               </label>
-              <textarea
-                id="order-note"
-                rows={2}
-                maxLength={200}
-                value={note}
-                onChange={(event) => order.setNote(event.target.value)}
-                placeholder={t.notePlaceholder}
-                className="rounded-xl border border-input bg-background/50 px-4 py-3 text-base placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              />
+              <button
+                type="button"
+                onClick={order.clearOrder}
+                className="text-xs text-muted-foreground underline underline-offset-4 hover:text-destructive"
+              >
+                {t.clearOrder}
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={order.clearOrder}
-              className="w-fit text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
-            >
-              {t.clearOrder}
-            </button>
-          </>
+            <input
+              id="order-note"
+              type="text"
+              maxLength={200}
+              value={note}
+              onChange={(event) => order.setNote(event.target.value)}
+              placeholder={t.notePlaceholder}
+              className="h-11 rounded-xl border border-input bg-background/50 px-3.5 text-sm placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            />
+          </div>
         ) : null}
       </div>
 
@@ -272,32 +274,7 @@ export function OrderSheet({ open, onClose, onShowTicket, onOrderPlaced }: Order
             {t.needTable}
           </p>
         ) : null}
-        <div className="flex flex-col gap-2 sm:flex-row">
-          {ready ? (
-            <a
-              href={whatsappUrl(receipt)}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => {
-                if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                  navigator.vibrate([25, 40, 25])
-                }
-                const placed = order.placeOrder()
-                if (placed && onOrderPlaced) {
-                  onOrderPlaced(placed)
-                }
-              }}
-              className={cn(actionClass, 'bg-accent text-accent-foreground')}
-            >
-              <MessageCircle className="size-4" aria-hidden="true" />
-              {t.sendWhatsApp}
-            </a>
-          ) : (
-            <button type="button" disabled className={cn(actionClass, 'bg-accent text-accent-foreground opacity-50')}>
-              <MessageCircle className="size-4" aria-hidden="true" />
-              {t.sendWhatsApp}
-            </button>
-          )}
+        {mode === 'dine-in' ? (
           <button
             type="button"
             disabled={!ready}
@@ -312,11 +289,57 @@ export function OrderSheet({ open, onClose, onShowTicket, onOrderPlaced }: Order
                 onShowTicket()
               }
             }}
-            className={cn(actionClass, 'bg-primary text-primary-foreground disabled:opacity-50')}
+            className={cn(actionClass, 'w-full bg-primary font-semibold text-primary-foreground shadow-md disabled:opacity-50')}
           >
-            {mode === 'dine-in' ? t.sendOrderToWaiter : t.sendOrderToCounter}
+            {t.sendOrderToWaiter}
           </button>
-        </div>
+        ) : (
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {ready ? (
+              <a
+                href={whatsappUrl(receipt)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => {
+                  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                    navigator.vibrate([25, 40, 25])
+                  }
+                  const placed = order.placeOrder()
+                  if (placed && onOrderPlaced) {
+                    onOrderPlaced(placed)
+                  }
+                }}
+                className={cn(actionClass, 'bg-accent font-semibold text-accent-foreground shadow-md')}
+              >
+                <MessageCircle className="size-4" aria-hidden="true" />
+                {t.sendWhatsApp}
+              </a>
+            ) : (
+              <button type="button" disabled className={cn(actionClass, 'bg-accent text-accent-foreground opacity-50')}>
+                <MessageCircle className="size-4" aria-hidden="true" />
+                {t.sendWhatsApp}
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={!ready}
+              onClick={() => {
+                if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                  navigator.vibrate([30, 50, 30])
+                }
+                const placed = order.placeOrder()
+                if (placed && onOrderPlaced) {
+                  onOrderPlaced(placed)
+                } else {
+                  onShowTicket()
+                }
+              }}
+              className={cn(actionClass, 'bg-primary font-semibold text-primary-foreground disabled:opacity-50')}
+            >
+              {t.sendOrderToCounter}
+            </button>
+          </div>
+        )}
       </div>
     </Sheet>
   )

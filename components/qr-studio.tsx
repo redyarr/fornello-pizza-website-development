@@ -40,7 +40,7 @@ function QrCard({ url, target }: { url: string; target: Target }) {
       <div className="text-sm leading-relaxed">
         <p>Scan to see the menu and order</p>
         <p lang="ckb" dir="rtl">
-          سکان بکە بۆ بینینی مینیو و داواکردن
+          سکان بکە بۆ بینینی مینیۆ و داواکردن
         </p>
       </div>
       <p className="text-xs">{SITE.instagramHandle}</p>
@@ -80,12 +80,12 @@ export function QrStudio() {
   return (
     <main className="mx-auto min-h-dvh max-w-5xl px-4 py-8 print:max-w-none print:p-0">
       <div className="print:hidden">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <Link href="/" className="flex w-fit items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="size-4" aria-hidden="true" />
             Back to the menu
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Link href="/floor" className="text-sm font-medium text-accent hover:underline">
               Live Floor Monitor →
             </Link>

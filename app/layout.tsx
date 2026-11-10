@@ -3,9 +3,9 @@ import type { Metadata, Viewport } from 'next'
 import { DM_Sans, Noto_Sans_Arabic, Oswald } from 'next/font/google'
 import './globals.css'
 
-const body = DM_Sans({ subsets: ['latin'], variable: '--font-body' })
-const display = Oswald({ subsets: ['latin'], variable: '--font-display-latin' })
-const arabic = Noto_Sans_Arabic({ subsets: ['arabic'], variable: '--font-arabic' })
+const body = DM_Sans({ subsets: ['latin'], weight: ['400', '500', '600', '700'], display: 'swap', variable: '--font-body' })
+const display = Oswald({ subsets: ['latin'], weight: ['500', '600', '700'], display: 'swap', variable: '--font-display-latin' })
+const arabic = Noto_Sans_Arabic({ subsets: ['arabic'], weight: ['400', '500', '600', '700'], display: 'swap', variable: '--font-arabic' })
 
 export const metadata: Metadata = {
   title: 'Fornello Pizza — Pizza & Coffee in Sulaymaniyah',
