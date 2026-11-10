@@ -42,6 +42,7 @@ import {
   bindTableOrder,
   clearTable,
   decodeTableSyncPayload,
+  ENABLE_WAITER_QR_SYNC,
   getInitialFloorState,
   updateTableStatus,
   type ActiveTableCall,
@@ -310,7 +311,7 @@ export function WaiterFloor() {
             </div>
           ) : null}
 
-          <div className="grid w-full grid-cols-4 rounded-full border border-border p-1 text-[11px] font-medium">
+          <div className="grid w-full grid-cols-2 gap-1 rounded-2xl border border-border p-1 text-xs font-medium sm:grid-cols-4 sm:rounded-full">
             <button
               type="button"
               onClick={() => {
@@ -487,14 +488,16 @@ export function WaiterFloor() {
             <span>{soundEnabled ? t.audioOn : t.audioOff}</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => setIsScanOpen(true)}
-            className="flex h-9 items-center gap-1.5 rounded-full bg-accent px-3.5 text-xs font-semibold text-accent-foreground hover:opacity-90 transition-opacity"
-          >
-            <Camera className="size-3.5" aria-hidden="true" />
-            <span>{t.scanGuestQr}</span>
-          </button>
+          {ENABLE_WAITER_QR_SYNC ? (
+            <button
+              type="button"
+              onClick={() => setIsScanOpen(true)}
+              className="flex h-9 items-center gap-1.5 rounded-full bg-accent px-3.5 text-xs font-semibold text-accent-foreground hover:opacity-90 transition-opacity"
+            >
+              <Camera className="size-3.5" aria-hidden="true" />
+              <span>{t.scanGuestQr}</span>
+            </button>
+          ) : null}
 
           <button
             type="button"
@@ -649,7 +652,7 @@ export function WaiterFloor() {
       </div>
 
       {/* 25-Table Interactive Floor Grid */}
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+      <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5">
         {filteredTables.map((tableNum) => {
           const call = floorState.activeCalls[tableNum]
           const order = floorState.tables[tableNum]
@@ -660,7 +663,7 @@ export function WaiterFloor() {
             <div
               key={tableNum}
               className={cn(
-                'relative flex flex-col justify-between rounded-3xl p-4 transition-all border',
+                'relative flex flex-col justify-between rounded-3xl p-3.5 sm:p-4 transition-all border',
                 isCalling
                   ? 'border-accent bg-accent/15 ring-2 ring-accent shadow-xl animate-pulse'
                   : isOccupied
@@ -669,8 +672,8 @@ export function WaiterFloor() {
               )}
             >
               <div>
-                <div className="flex items-center justify-between">
-                  <span className="font-display text-2xl font-bold tracking-tight">
+                <div className="flex flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="font-display text-xl sm:text-2xl font-bold tracking-tight">
                     {`${t.table} ${padTable(tableNum)}`}
                   </span>
                   {call ? (
@@ -701,7 +704,7 @@ export function WaiterFloor() {
 
                 {/* Table Content Summary */}
                 {order ? (
-                  <div className="mt-3 flex flex-col gap-1.5 text-xs">
+                  <div className="mt-2.5 flex flex-col gap-1 text-xs">
                     <div className="flex items-center justify-between text-muted-foreground text-[11px]">
                       <span>{order.orderRef}</span>
                       <span>{order.timestamp}</span>
@@ -716,14 +719,14 @@ export function WaiterFloor() {
                     </p>
                   </div>
                 ) : (
-                  <p className="mt-4 text-xs text-muted-foreground italic">
-                    Ready for guests
+                  <p className="mt-3 text-xs text-muted-foreground italic">
+                    {lang === 'ckb' ? 'ئامادەیە بۆ میوان' : 'Ready for guests'}
                   </p>
                 )}
               </div>
 
               {/* Table Action Buttons */}
-              <div className="mt-4 flex flex-col gap-1.5 border-t border-dashed border-foreground/20 pt-3">
+              <div className="mt-3.5 flex flex-col gap-1.5 border-t border-dashed border-foreground/20 pt-3">
                 {isCalling ? (
                   <button
                     type="button"
@@ -740,7 +743,7 @@ export function WaiterFloor() {
                     <button
                       type="button"
                       onClick={() => setSelectedTable(tableNum)}
-                      className="flex-1 h-8 rounded-full border border-primary/50 text-[11px] font-medium hover:bg-foreground/10"
+                      className="flex-1 h-8 rounded-full border border-primary/50 px-2 text-[11px] font-medium truncate hover:bg-foreground/10"
                     >
                       {t.viewTicket}
                     </button>
@@ -751,7 +754,7 @@ export function WaiterFloor() {
                           clearTable(tableNum)
                         }
                       }}
-                      className="h-8 px-2.5 rounded-full border border-destructive/40 text-[10px] font-semibold text-destructive hover:bg-destructive/10"
+                      className="h-8 shrink-0 px-2.5 rounded-full border border-destructive/40 text-[10px] font-semibold text-destructive hover:bg-destructive/10"
                       title={t.clearAndPaid}
                     >
                       ✓
@@ -772,7 +775,7 @@ export function WaiterFloor() {
           label={`${t.table} ${padTable(selectedTable)} Details`}
           variant="sheet"
         >
-          <div className="flex h-full flex-col justify-between p-6">
+          <div className="flex max-h-[88dvh] flex-col justify-between overflow-y-auto p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:p-6">
             <div>
               <div className="flex items-center justify-between border-b border-dashed border-foreground/30 pb-4">
                 <div>

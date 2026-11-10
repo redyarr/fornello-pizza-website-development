@@ -18,24 +18,24 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-2 px-3 sm:gap-3 sm:px-4">
+      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-1.5 px-3 sm:gap-3 sm:px-4">
         <a href="#top" lang="en" className="flex shrink-0 flex-col gap-1" aria-label="Fornello Pizza">
-          <span className="font-display text-xl leading-none font-semibold tracking-[0.18em] text-primary">
+          <span className="font-display text-lg leading-none font-semibold tracking-[0.15em] text-primary sm:text-xl sm:tracking-[0.18em]">
             FORNELLO
           </span>
           <Tricolor className="h-0.5 w-full" />
         </a>
 
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex min-w-0 items-center gap-1 sm:gap-2">
           {mode === 'dine-in' && table ? (
             <button
               type="button"
               onClick={() => setServiceOpen(true)}
-              className="flex h-9 items-center gap-1.5 rounded-full border border-accent/40 bg-accent/15 px-2.5 text-xs font-semibold text-accent hover:bg-accent/25 transition-colors sm:px-3 sm:text-sm"
+              className="flex h-9 max-w-[115px] items-center gap-1 rounded-full border border-accent/40 bg-accent/15 px-2.5 text-xs font-semibold text-accent hover:bg-accent/25 transition-colors sm:max-w-none sm:gap-1.5 sm:px-3 sm:text-sm"
               title={t.serviceModalTitle}
             >
               <Bell className="size-3.5 shrink-0" aria-hidden="true" />
-              <span>{t.callWaiter}</span>
+              <span className="truncate">{t.callWaiter}</span>
             </button>
           ) : null}
 
@@ -43,9 +43,9 @@ export function SiteHeader() {
             type="button"
             onClick={() => setModeOpen(true)}
             aria-label={`${t.orderType}: ${modeLabel}`}
-            className="flex h-9 max-w-[140px] items-center gap-1.5 rounded-full border border-border px-2.5 text-xs font-medium transition-colors hover:bg-foreground/10 sm:max-w-none sm:gap-2 sm:px-3 sm:text-sm"
+            className="flex h-9 max-w-[120px] items-center gap-1 rounded-full border border-border px-2.5 text-xs font-medium transition-colors hover:bg-foreground/10 sm:max-w-none sm:gap-2 sm:px-3 sm:text-sm"
           >
-            <ModeIcon className="size-4 shrink-0 text-primary" aria-hidden="true" />
+            <ModeIcon className="size-3.5 shrink-0 text-primary sm:size-4" aria-hidden="true" />
             <span className="truncate">{modeLabel}</span>
           </button>
           <button

@@ -31,8 +31,8 @@ function QrCard({ url, target }: { url: string; target: Target }) {
     <div className="flex w-full max-w-80 flex-col items-center gap-4 rounded-3xl bg-foreground px-6 py-8 text-center text-background sm:px-8 sm:py-9 [print-color-adjust:exact]">
       <p className="font-display text-4xl leading-none font-semibold tracking-[0.14em]">FORNELLO</p>
       <Tricolor className="[&>span:nth-child(2)]:bg-background/20" />
-      <div className="rounded-2xl border-2 border-dashed border-background/50 p-4">
-        <QRCodeSVG value={url} size={192} level="M" bgColor="transparent" fgColor="#16211c" />
+      <div className="rounded-2xl border-2 border-dashed border-background/50 p-3 sm:p-4">
+        <QRCodeSVG value={url} size={192} level="M" bgColor="transparent" fgColor="#16211c" className="h-auto max-w-full" />
       </div>
       <p className="font-display text-4xl leading-none font-semibold tracking-wide uppercase">
         {target === 'takeaway' ? 'Takeaway' : `Table ${padTable(target)}`}

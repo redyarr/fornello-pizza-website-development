@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
-import { bindTableOrder } from '@/lib/floor'
+import { bindTableOrder, getInitialFloorState } from '@/lib/floor'
 import { STRINGS, type Strings } from '@/lib/i18n'
 import { getMergedMenu, type Lang, type MenuItem } from '@/lib/menu'
 import { cartTotal, orderQuery, type CartLine, type Mode, type OrderParams, type Pacing, type Selections } from '@/lib/order'
@@ -163,14 +163,17 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
   }, [])
 
   // Load active placed order from localStorage safely after mount
+  // Automatically expires after 45 minutes (typical dining turn) or if scanning a different table QR code
   useEffect(() => {
     try {
       const savedPlaced = localStorage.getItem('fornello_placed_order_v1')
       if (savedPlaced) {
         const parsed = JSON.parse(savedPlaced) as PlacedOrder
         if (parsed && typeof parsed === 'object') {
-          // Keep active for 4 hours
-          if (Date.now() - (parsed.createdAt || 0) < 14400000) {
+          const ageMs = Date.now() - (parsed.createdAt || 0)
+          const sameTableOrTakeaway = !initial.table || parsed.table === initial.table
+          // Keep active for 45 minutes on the same table
+          if (ageMs < 45 * 60 * 1000 && sameTableOrTakeaway) {
             setActivePlacedOrder(parsed)
           } else {
             localStorage.removeItem('fornello_placed_order_v1')
@@ -178,7 +181,7 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
         }
       }
     } catch {}
-  }, [])
+  }, [initial.table])
 
   // Hydrate and listen for menu updates from staff admin studio or storage
   useEffect(() => {
@@ -189,6 +192,31 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
     return () => {
       window.removeEventListener('fornello_menu_updated', onMenuUpdate)
       window.removeEventListener('storage', onMenuUpdate)
+    }
+  }, [])
+
+  // If staff settles/clears the table on /floor, automatically clear activePlacedOrder for that table
+  useEffect(() => {
+    const syncFloorClear = () => {
+      setActivePlacedOrder((prev) => {
+        if (!prev || prev.mode !== 'dine-in' || !prev.table) return prev
+        const floor = getInitialFloorState()
+        const floorRecord = floor.tables[prev.table]
+        // If table was cleared or now has a different orderRef, clear this old ticket
+        if (!floorRecord || floorRecord.orderRef !== prev.orderRef) {
+          try {
+            localStorage.removeItem('fornello_placed_order_v1')
+          } catch {}
+          return null
+        }
+        return prev
+      })
+    }
+    window.addEventListener('fornello_floor_updated', syncFloorClear)
+    window.addEventListener('storage', syncFloorClear)
+    return () => {
+      window.removeEventListener('fornello_floor_updated', syncFloorClear)
+      window.removeEventListener('storage', syncFloorClear)
     }
   }, [])
 
@@ -358,6 +386,9 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
   }
 
   const simulateTableScan = (targetTable: number | null) => {
+    if (activePlacedOrder && activePlacedOrder.table !== targetTable) {
+      clearActivePlacedOrder()
+    }
     if (targetTable === null || targetTable < 1 || targetTable > 25) {
       setVerifiedTable(null)
       try {

@@ -86,7 +86,7 @@ export function ServiceRequestSheet({
     >
       {activeRequest ? (
         // BEACON MODE: Fullscreen pulsating floor beacon
-        <div className="mx-auto flex h-full w-full max-w-lg flex-col justify-between p-6 text-center select-none">
+        <div className="mx-auto flex h-full w-full max-w-lg flex-col justify-between overflow-y-auto p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-center select-none sm:p-6">
           <div className="flex items-center justify-between border-b border-dashed border-background/30 pb-4">
             <span className="font-display text-sm tracking-wider uppercase text-background/70">
               {SITE.name} · Table Service
@@ -149,7 +149,7 @@ export function ServiceRequestSheet({
         </div>
       ) : (
         // SELECTION MODE
-        <div className="mx-auto flex w-full max-w-lg flex-col gap-6 p-6">
+        <div className="mx-auto flex max-h-[85dvh] w-full max-w-lg flex-col gap-5 overflow-y-auto p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:gap-6 sm:p-6">
           <div className="flex items-center justify-between border-b border-dashed border-foreground/30 pb-4">
             <div>
               <h2 className="font-display text-2xl font-semibold tracking-wide uppercase">{t.serviceModalTitle}</h2>

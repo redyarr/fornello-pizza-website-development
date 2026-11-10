@@ -3,7 +3,7 @@
 import { ArrowLeft, Bell, Check, CheckCircle2, MessageCircle, Printer } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useState } from 'react'
-import { dispatchTableCall, encodeTableSyncPayload } from '@/lib/floor'
+import { dispatchTableCall, ENABLE_WAITER_QR_SYNC, encodeTableSyncPayload } from '@/lib/floor'
 import { SITE } from '@/lib/i18n'
 import { getItem } from '@/lib/menu'
 import {
@@ -69,20 +69,20 @@ export function WaiterTicket({ open, time, onBack, onFinish }: WaiterTicketProps
   return (
     <Sheet open={open} onClose={onBack} label={dineIn ? t.ticketHintWaiter : t.ticketHintCounter} variant="full">
       <div className="mx-auto flex h-full w-full max-w-xl flex-col">
-        <div className="flex items-center justify-between gap-4 px-5 py-4">
+        <div className="flex items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-5 sm:py-4">
           <button
             type="button"
             onClick={onBack}
-            className="flex h-10 items-center gap-2 rounded-full border border-background/30 px-4 text-sm font-medium hover:bg-background/10"
+            className="flex h-9 sm:h-10 shrink-0 items-center gap-1.5 sm:gap-2 rounded-full border border-background/30 px-3 sm:px-4 text-xs sm:text-sm font-medium hover:bg-background/10"
           >
             <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
-            {t.backToOrder}
+            <span>{t.backToOrder}</span>
           </button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={() => window.print()}
-              className="flex h-9 items-center gap-1.5 rounded-full border border-background/30 px-3 text-xs font-medium hover:bg-background/10 print:hidden"
+              className="flex h-9 items-center gap-1.5 rounded-full border border-background/30 px-2.5 sm:px-3 text-xs font-medium hover:bg-background/10 print:hidden"
               title={t.printThermalTicket}
             >
               <Printer className="size-3.5" aria-hidden="true" />
@@ -91,11 +91,11 @@ export function WaiterTicket({ open, time, onBack, onFinish }: WaiterTicketProps
             <span className="rounded-full border border-background/30 px-2.5 py-0.5 text-xs font-mono font-semibold tracking-wider">
               {activeRef}
             </span>
-            <p className="text-sm tabular-nums">{activeTime}</p>
+            <p className="text-xs sm:text-sm tabular-nums">{activeTime}</p>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 pb-6">
+        <div className="flex-1 overflow-y-auto px-4 pb-6 sm:px-5">
           <div className="flex flex-col items-center gap-2 border-b-2 border-dashed border-background/40 pb-5 text-center">
             {activePlacedOrder ? (
               <div className="w-full mb-2 flex items-center justify-center gap-3 rounded-2xl border-2 border-emerald-500/80 bg-emerald-500/20 py-3.5 px-4 text-emerald-100 print:hidden animate-in fade-in zoom-in-95 duration-200">
@@ -147,7 +147,7 @@ export function WaiterTicket({ open, time, onBack, onFinish }: WaiterTicketProps
               </a>
             ) : null}
 
-            {dineIn && activeTable ? (
+            {ENABLE_WAITER_QR_SYNC && dineIn && activeTable ? (
               <div className="my-2 flex flex-col items-center gap-1 rounded-2xl bg-white p-3 shadow-md print:hidden">
                 <QRCodeSVG
                   value={encodeTableSyncPayload(activeTable, activeRef, activeLines, cartTotal(activeLines))}
@@ -223,43 +223,45 @@ export function WaiterTicket({ open, time, onBack, onFinish }: WaiterTicketProps
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-3 border-t-2 border-background px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+        <div className="flex flex-col gap-2.5 border-t-2 border-background px-4 pt-3.5 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-5 sm:pt-4">
           <div className="flex items-baseline justify-between">
             <span className="font-display text-xl tracking-wide uppercase">{t.total}</span>
-            <span className="text-3xl font-semibold tabular-nums">{formatIQD(cartTotal(activeLines))}</span>
+            <span className="text-2xl sm:text-3xl font-semibold tabular-nums">{formatIQD(cartTotal(activeLines))}</span>
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row">
             <button
               type="button"
               onClick={onBack}
-              className="h-12 flex-1 rounded-full bg-background font-medium text-foreground hover:opacity-90 transition-opacity"
+              className="h-11 sm:h-12 flex-1 rounded-full bg-background px-4 text-sm font-semibold text-foreground hover:opacity-90 transition-opacity"
             >
               {t.backToMenu}
             </button>
 
-            {!staffConfirmed ? (
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-1">
+              {!staffConfirmed ? (
+                <button
+                  type="button"
+                  onClick={() => setStaffConfirmed(true)}
+                  className="flex h-11 sm:h-12 flex-1 items-center justify-center gap-1.5 rounded-full border border-background/40 px-3 text-xs sm:text-sm font-medium text-background hover:bg-background/10 transition-colors"
+                >
+                  <Check className="size-3.5 shrink-0" aria-hidden="true" />
+                  <span className="truncate">{t.markReceived}</span>
+                </button>
+              ) : null}
+
               <button
                 type="button"
-                onClick={() => setStaffConfirmed(true)}
-                className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full border border-background/40 font-medium text-background hover:bg-background/10 transition-colors"
+                onClick={() => {
+                  clearOrder()
+                  clearActivePlacedOrder()
+                  onFinish()
+                }}
+                className="h-11 sm:h-12 flex-1 rounded-full border border-background/40 px-3 text-xs sm:text-sm font-medium text-background hover:bg-background/10 transition-colors truncate"
               >
-                <Check className="size-4" aria-hidden="true" />
-                {t.markReceived}
+                {t.startNewOrder}
               </button>
-            ) : null}
-
-            <button
-              type="button"
-              onClick={() => {
-                clearOrder()
-                clearActivePlacedOrder()
-                onFinish()
-              }}
-              className="h-12 flex-1 rounded-full border border-background/40 font-medium text-background hover:bg-background/10 transition-colors text-xs sm:text-sm"
-            >
-              {t.startNewOrder}
-            </button>
+            </div>
           </div>
         </div>
       </div>

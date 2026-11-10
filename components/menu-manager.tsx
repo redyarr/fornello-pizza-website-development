@@ -378,7 +378,7 @@ export function MenuManager() {
           ) : null}
 
           {/* Auth Method Navigation Tabs */}
-          <div className="grid w-full grid-cols-4 rounded-full border border-border p-1 text-[11px] font-medium">
+          <div className="grid w-full grid-cols-2 gap-1 rounded-2xl border border-border p-1 text-xs font-medium sm:grid-cols-4 sm:rounded-full">
             <button
               type="button"
               onClick={() => {
@@ -682,7 +682,7 @@ export function MenuManager() {
       </div>
 
       {/* Studio Section Switcher Tabs */}
-      <div className="mt-6 flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card/70 p-1.5">
+      <div className="mt-6 flex flex-col gap-1.5 rounded-2xl border border-border bg-card/70 p-1.5 sm:flex-row sm:items-center sm:gap-2">
         <button
           type="button"
           onClick={() => setStudioTab('items')}
@@ -706,7 +706,7 @@ export function MenuManager() {
               : 'text-foreground/75 hover:bg-foreground/10 hover:text-foreground',
           )}
         >
-          <SlidersHorizontal className="size-4" aria-hidden="true" />
+          <SlidersHorizontal className="size-4 shrink-0" aria-hidden="true" />
           <span>{t.adminTabModifiers}</span>
         </button>
         <button
@@ -821,36 +821,38 @@ export function MenuManager() {
                     ) : null}
                   </div>
 
-                  <div className="flex items-center gap-2.5 self-end sm:self-center">
+                  <div className="flex flex-wrap items-center justify-between gap-2 w-full sm:w-auto sm:justify-end sm:self-center">
                     <span className="text-base font-semibold tabular-nums">{formatIQD(item.price)}</span>
-                    <button
-                      type="button"
-                      onClick={() => toggleSoldOut(item.id, isSoldOut)}
-                      className={cn(
-                        'h-9 rounded-full px-3.5 text-xs font-medium transition-colors',
-                        isSoldOut
-                          ? 'bg-basil text-primary-foreground hover:opacity-90'
-                          : 'border border-destructive/40 text-destructive hover:bg-destructive/10',
-                      )}
-                    >
-                      {isSoldOut ? 'Set In Stock' : 'Mark Sold Out (86)'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditingItem(item)}
-                      className="grid size-9 place-items-center rounded-full border border-border text-foreground/80 hover:bg-foreground/10"
-                      aria-label={t.editItem}
-                    >
-                      <SlidersHorizontal className="size-4" aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteItem(item.id)}
-                      className="grid size-9 place-items-center rounded-full border border-destructive/40 text-destructive hover:bg-destructive/10"
-                      aria-label={t.deleteItem}
-                    >
-                      <Trash2 className="size-4" aria-hidden="true" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleSoldOut(item.id, isSoldOut)}
+                        className={cn(
+                          'h-9 rounded-full px-3 text-xs font-medium transition-colors',
+                          isSoldOut
+                            ? 'bg-basil text-primary-foreground hover:opacity-90'
+                            : 'border border-destructive/40 text-destructive hover:bg-destructive/10',
+                        )}
+                      >
+                        {isSoldOut ? 'Set In Stock' : 'Mark Sold Out (86)'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingItem(item)}
+                        className="grid size-9 shrink-0 place-items-center rounded-full border border-border text-foreground/80 hover:bg-foreground/10"
+                        aria-label={t.editItem}
+                      >
+                        <SlidersHorizontal className="size-4" aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteItem(item.id)}
+                        className="grid size-9 shrink-0 place-items-center rounded-full border border-destructive/40 text-destructive hover:bg-destructive/10"
+                        aria-label={t.deleteItem}
+                      >
+                        <Trash2 className="size-4" aria-hidden="true" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               )

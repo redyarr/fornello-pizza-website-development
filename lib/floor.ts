@@ -33,6 +33,15 @@ export type FloorState = {
 const FLOOR_STORAGE_KEY = 'fornello_floor_state_v2'
 const BROADCAST_CHANNEL_NAME = 'fornello_floor_mesh_channel'
 
+// Feature toggle: set to true if you want to show the sync QR code on the digital waiter ticket
+// and the "Scan Customer Order" button on the Live Floor Monitor in the future.
+export const ENABLE_WAITER_QR_SYNC = false
+
+// Auto-expire forgotten table sessions after 90 minutes and service calls after 30 minutes
+// so a table never stays stuck if staff forget to manually clear it.
+const STALE_TABLE_TTL_MS = 90 * 60 * 1000
+const STALE_CALL_TTL_MS = 30 * 60 * 1000
+
 let broadcastChannel: BroadcastChannel | null = null
 
 function getBroadcastChannel(): BroadcastChannel | null {
@@ -49,10 +58,25 @@ export function getInitialFloorState(): FloorState {
     const raw = localStorage.getItem(FLOOR_STORAGE_KEY)
     if (!raw) return { tables: {}, activeCalls: {} }
     const parsed = JSON.parse(raw) as FloorState
-    return {
-      tables: parsed.tables || {},
-      activeCalls: parsed.activeCalls || {},
+    const now = Date.now()
+    const rawTables = parsed.tables || {}
+    const rawCalls = parsed.activeCalls || {}
+
+    const tables: Record<number, TableOrderRecord | undefined> = {}
+    for (const [k, record] of Object.entries(rawTables)) {
+      if (record && now - (record.createdAt || 0) < STALE_TABLE_TTL_MS) {
+        tables[Number(k)] = record
+      }
     }
+
+    const activeCalls: Record<number, ActiveTableCall | undefined> = {}
+    for (const [k, call] of Object.entries(rawCalls)) {
+      if (call && now - (call.timestamp || 0) < STALE_CALL_TTL_MS) {
+        activeCalls[Number(k)] = call
+      }
+    }
+
+    return { tables, activeCalls }
   } catch {
     return { tables: {}, activeCalls: {} }
   }
