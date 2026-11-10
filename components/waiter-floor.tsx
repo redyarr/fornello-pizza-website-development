@@ -709,6 +709,11 @@ export function WaiterFloor() {
                       <span>{order.orderRef}</span>
                       <span>{order.timestamp}</span>
                     </div>
+                    {order.deviceId ? (
+                      <span className="w-fit rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                        📱 {order.deviceId}
+                      </span>
+                    ) : null}
 
                     <p className="line-clamp-2 text-foreground font-medium text-xs leading-snug">
                       {order.lines.map((l) => `${l.qty}× ${getItem(l.itemId)?.name || 'Item'}`).join(', ')}

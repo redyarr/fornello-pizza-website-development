@@ -12,6 +12,7 @@ export type ActiveTableCall = {
   type: TableCallType
   time: string
   timestamp: number
+  deviceId?: string
 }
 
 export type TableOrderRecord = {
@@ -21,6 +22,7 @@ export type TableOrderRecord = {
   createdAt: number
   lines: CartLine[]
   total: number
+  deviceId?: string
   call?: ActiveTableCall
   status: 'active' | 'served' | 'paid'
 }
@@ -31,7 +33,45 @@ export type FloorState = {
 }
 
 const FLOOR_STORAGE_KEY = 'fornello_floor_state_v2'
+const DEVICE_STORAGE_KEY = 'fornello_device_id_v1'
 const BROADCAST_CHANNEL_NAME = 'fornello_floor_mesh_channel'
+
+function generateRandomDeviceTag(): string {
+  const bytes = new Uint8Array(3)
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(bytes)
+  } else {
+    for (let i = 0; i < 3; i++) bytes[i] = Math.floor(Math.random() * 256)
+  }
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0'))
+    .join('')
+    .toUpperCase()
+    .slice(0, 4)
+  return `DEV-${hex}`
+}
+
+export function getOrCreateDeviceId(): string {
+  if (typeof window === 'undefined') return 'DEV-SSR0'
+  try {
+    const existing = localStorage.getItem(DEVICE_STORAGE_KEY)
+    if (existing && existing.startsWith('DEV-')) return existing
+    const fresh = generateRandomDeviceTag()
+    localStorage.setItem(DEVICE_STORAGE_KEY, fresh)
+    return fresh
+  } catch {
+    return generateRandomDeviceTag()
+  }
+}
+
+export function rotateDeviceId(): string {
+  const fresh = generateRandomDeviceTag()
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(DEVICE_STORAGE_KEY, fresh)
+    } catch {}
+  }
+  return fresh
+}
 
 // Feature toggle: set to true if you want to show the sync QR code on the digital waiter ticket
 // and the "Scan Customer Order" button on the Live Floor Monitor in the future.
@@ -100,13 +140,15 @@ export function saveFloorState(state: FloorState): void {
 // Live Service Call Dispatch & Handlers
 // -------------------------------------------------------------
 
-export function dispatchTableCall(table: number, type: TableCallType): void {
+export function dispatchTableCall(table: number, type: TableCallType, deviceId?: string): void {
   const current = getInitialFloorState()
   const now = new Date()
+  const activeDeviceId = deviceId ?? getOrCreateDeviceId()
   const call: ActiveTableCall = {
     type,
     time: now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
     timestamp: Date.now(),
+    deviceId: activeDeviceId,
   }
 
   const existingTable = current.tables[table]
@@ -157,24 +199,61 @@ export function bindTableOrder(
   orderRef: string,
   lines: CartLine[],
   total: number,
+  deviceId?: string,
 ): void {
   const current = getInitialFloorState()
   const now = new Date()
+  const activeDeviceId = deviceId ?? getOrCreateDeviceId()
+  const prevRecord = current.tables[table]
   const existingCall = current.activeCalls[table]
+
+  // Per-Phone Isolation:
+  // - If the SAME customer phone (same deviceId) at this table orders a second round, merge their items into their active table bill.
+  // - If a DIFFERENT customer phone (new deviceId) orders at this table, isolate it completely and replace any un-cleared previous guest's record!
+  const isSamePhoneSession = Boolean(prevRecord && prevRecord.deviceId && prevRecord.deviceId === activeDeviceId)
+
+  const mergedLines: CartLine[] = isSamePhoneSession && prevRecord ? [...prevRecord.lines] : []
+  for (const incoming of lines) {
+    const sig = JSON.stringify(incoming.selections)
+    const matchIdx = mergedLines.findIndex(
+      (l) => l.itemId === incoming.itemId && JSON.stringify(l.selections) === sig && l.notes === incoming.notes,
+    )
+    if (matchIdx >= 0) {
+      mergedLines[matchIdx] = {
+        ...mergedLines[matchIdx],
+        qty: mergedLines[matchIdx].qty + incoming.qty,
+      }
+    } else {
+      mergedLines.push(incoming)
+    }
+  }
+
+  const finalTotal = isSamePhoneSession && prevRecord ? prevRecord.total + total : total
+  const finalCall =
+    existingCall && (!existingCall.deviceId || existingCall.deviceId === activeDeviceId)
+      ? existingCall
+      : undefined
+
+  const nextCalls = { ...current.activeCalls }
+  if (!finalCall) {
+    delete nextCalls[table]
+  }
 
   const record: TableOrderRecord = {
     table,
-    orderRef,
+    orderRef: isSamePhoneSession && prevRecord ? prevRecord.orderRef : orderRef,
     timestamp: now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
     createdAt: Date.now(),
-    lines,
-    total,
-    call: existingCall,
+    lines: mergedLines,
+    total: finalTotal,
+    deviceId: activeDeviceId,
+    call: finalCall,
     status: 'active',
   }
 
   const nextState: FloorState = {
     ...current,
+    activeCalls: nextCalls,
     tables: {
       ...current.tables,
       [table]: record,

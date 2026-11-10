@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
-import { bindTableOrder, getInitialFloorState } from '@/lib/floor'
+import { bindTableOrder, getInitialFloorState, getOrCreateDeviceId, rotateDeviceId } from '@/lib/floor'
 import { STRINGS, type Strings } from '@/lib/i18n'
 import { getMergedMenu, type Lang, type MenuItem } from '@/lib/menu'
 import { cartTotal, orderQuery, type CartLine, type Mode, type OrderParams, type Pacing, type Selections } from '@/lib/order'
@@ -16,6 +16,7 @@ export type PastOrder = {
   table: number | null
   lines: CartLine[]
   total: number
+  deviceId?: string
 }
 
 export type PlacedOrder = {
@@ -31,6 +32,7 @@ export type PlacedOrder = {
   note: string
   timestamp: string
   createdAt: number
+  deviceId?: string
 }
 
 type OrderContextValue = {
@@ -38,6 +40,7 @@ type OrderContextValue = {
   t: Strings
   mode: Mode
   table: number | null
+  deviceId: string
   isTableVerified: boolean
   verifiedTable: number | null
   lines: CartLine[]
@@ -54,6 +57,7 @@ type OrderContextValue = {
   setMode: (mode: Mode) => void
   setTable: (table: number | null) => void
   simulateTableScan: (table: number | null) => void
+  simulateNewCustomerPhone: () => void
   addLine: (item: MenuItem, selections: Selections, qty: number, notes?: string) => void
   updateLine: (uid: string, selections: Selections, qty: number, notes?: string) => void
   setQty: (uid: string, qty: number) => void
@@ -83,6 +87,7 @@ const generateOrderRef = () => `F-${Math.floor(1000 + Math.random() * 9000)}`
 
 export function OrderProvider({ initial, children }: { initial: OrderParams; children: ReactNode }) {
   const [params, setParams] = useState<OrderParams>(initial)
+  const [deviceId, setDeviceId] = useState<string>('DEV-INIT')
   const [verifiedTable, setVerifiedTable] = useState<number | null>(initial.table)
   const [lines, setLines] = useState<CartLine[]>([])
   const [pacing, setPacing] = useState<Pacing>('together')
@@ -98,6 +103,12 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
   const [isOffline, setIsOffline] = useState(false)
   const hasHydratedCartRef = useRef(false)
   const toastTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Hydrate per-phone cryptographic deviceId on client mount
+  useEffect(() => {
+    const id = getOrCreateDeviceId()
+    setDeviceId(id)
+  }, [])
 
   // Sync and persist verified table session
   useEffect(() => {
@@ -151,37 +162,44 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
     }, 2800)
   }
 
-  // Load past orders from localStorage safely after mount
+  // Load past orders scoped strictly to this phone's deviceId
   useEffect(() => {
+    if (deviceId === 'DEV-INIT') return
     try {
-      const savedHistory = localStorage.getItem('fornello_order_history_v1')
+      const savedHistory = localStorage.getItem(`fornello_order_history_${deviceId}`)
       if (savedHistory) {
         const parsed = JSON.parse(savedHistory)
         if (Array.isArray(parsed)) setPastOrders(parsed)
+      } else {
+        setPastOrders([])
       }
     } catch {}
-  }, [])
+  }, [deviceId])
 
-  // Load active placed order from localStorage safely after mount
-  // Automatically expires after 45 minutes (typical dining turn) or if scanning a different table QR code
+  // Load active placed order scoped strictly to this phone's deviceId
+  // Automatically expires after 45 minutes or if scanning a different table QR code
   useEffect(() => {
+    if (deviceId === 'DEV-INIT') return
     try {
-      const savedPlaced = localStorage.getItem('fornello_placed_order_v1')
+      const savedPlaced = localStorage.getItem(`fornello_placed_order_${deviceId}`)
       if (savedPlaced) {
         const parsed = JSON.parse(savedPlaced) as PlacedOrder
         if (parsed && typeof parsed === 'object') {
           const ageMs = Date.now() - (parsed.createdAt || 0)
+          const samePhone = !parsed.deviceId || parsed.deviceId === deviceId
           const sameTableOrTakeaway = !initial.table || parsed.table === initial.table
-          // Keep active for 45 minutes on the same table
-          if (ageMs < 45 * 60 * 1000 && sameTableOrTakeaway) {
+          if (ageMs < 45 * 60 * 1000 && samePhone && sameTableOrTakeaway) {
             setActivePlacedOrder(parsed)
           } else {
-            localStorage.removeItem('fornello_placed_order_v1')
+            localStorage.removeItem(`fornello_placed_order_${deviceId}`)
+            setActivePlacedOrder(null)
           }
         }
+      } else {
+        setActivePlacedOrder(null)
       }
     } catch {}
-  }, [initial.table])
+  }, [deviceId, initial.table])
 
   // Hydrate and listen for menu updates from staff admin studio or storage
   useEffect(() => {
@@ -195,17 +213,21 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
     }
   }, [])
 
-  // If staff settles/clears the table on /floor, automatically clear activePlacedOrder for that table
+  // If staff settles/clears the table on /floor, or if another phone takes over the table, clear this phone's old active ticket
   useEffect(() => {
     const syncFloorClear = () => {
       setActivePlacedOrder((prev) => {
         if (!prev || prev.mode !== 'dine-in' || !prev.table) return prev
         const floor = getInitialFloorState()
         const floorRecord = floor.tables[prev.table]
-        // If table was cleared or now has a different orderRef, clear this old ticket
-        if (!floorRecord || floorRecord.orderRef !== prev.orderRef) {
+        const currentDevId = getOrCreateDeviceId()
+        if (
+          !floorRecord ||
+          (floorRecord.deviceId && floorRecord.deviceId !== currentDevId) ||
+          floorRecord.orderRef !== prev.orderRef
+        ) {
           try {
-            localStorage.removeItem('fornello_placed_order_v1')
+            localStorage.removeItem(`fornello_placed_order_${currentDevId}`)
           } catch {}
           return null
         }
@@ -220,32 +242,37 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
     }
   }, [])
 
-  // Restore cart from localStorage safely after mount
+  // Restore cart scoped strictly to this phone's deviceId
   useEffect(() => {
+    if (deviceId === 'DEV-INIT') return
     try {
-      const saved = localStorage.getItem('fornello_cart_v1')
+      const saved = localStorage.getItem(`fornello_cart_${deviceId}`)
       if (saved) {
         const parsed = JSON.parse(saved)
         if (Array.isArray(parsed) && parsed.length > 0) {
           setLines(parsed)
+        } else {
+          setLines([])
         }
+      } else {
+        setLines([])
       }
     } catch {
       // ignore in incognito or blocked storage
     } finally {
       hasHydratedCartRef.current = true
     }
-  }, [])
+  }, [deviceId])
 
-  // Persist cart to localStorage on changes after hydration
+  // Persist cart to localStorage scoped strictly to this phone's deviceId
   useEffect(() => {
-    if (!hasHydratedCartRef.current) return
+    if (!hasHydratedCartRef.current || deviceId === 'DEV-INIT') return
     try {
-      localStorage.setItem('fornello_cart_v1', JSON.stringify(lines))
+      localStorage.setItem(`fornello_cart_${deviceId}`, JSON.stringify(lines))
     } catch {
       // ignore
     }
-  }, [lines])
+  }, [lines, deviceId])
 
   useEffect(() => {
     document.documentElement.lang = params.lang
@@ -302,19 +329,20 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
     setPacing('together')
     setOrderRef(generateOrderRef())
     try {
-      localStorage.removeItem('fornello_cart_v1')
+      localStorage.removeItem(`fornello_cart_${deviceId}`)
     } catch {}
   }
 
   const clearOrderHistory = () => {
     setPastOrders([])
     try {
-      localStorage.removeItem('fornello_order_history_v1')
+      localStorage.removeItem(`fornello_order_history_${deviceId}`)
     } catch {}
   }
 
   const saveCompletedOrder = () => {
     if (lines.length === 0) return
+    const activeDevId = deviceId === 'DEV-INIT' ? getOrCreateDeviceId() : deviceId
     const newRecord: PastOrder = {
       id: crypto.randomUUID(),
       orderRef,
@@ -323,14 +351,15 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
       table: params.table,
       lines: [...lines],
       total: cartTotal(lines),
+      deviceId: activeDevId,
     }
     const updated = [newRecord, ...pastOrders.slice(0, 9)]
     setPastOrders(updated)
     if (params.mode === 'dine-in' && params.table) {
-      bindTableOrder(params.table, orderRef, lines, cartTotal(lines))
+      bindTableOrder(params.table, orderRef, lines, cartTotal(lines), activeDevId)
     }
     try {
-      localStorage.setItem('fornello_order_history_v1', JSON.stringify(updated))
+      localStorage.setItem(`fornello_order_history_${activeDevId}`, JSON.stringify(updated))
     } catch {}
   }
 
@@ -342,32 +371,63 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
 
   const placeOrder = (): PlacedOrder | null => {
     if (lines.length === 0) return null
+    const activeDevId = deviceId === 'DEV-INIT' ? getOrCreateDeviceId() : deviceId
     const orderTotal = cartTotal(lines)
+
+    // Check if this same phone already has an active dine-in order at this exact table
+    const isSamePhoneTableSession = Boolean(
+      activePlacedOrder &&
+        params.mode === 'dine-in' &&
+        params.table &&
+        activePlacedOrder.mode === 'dine-in' &&
+        activePlacedOrder.table === params.table &&
+        activePlacedOrder.deviceId === activeDevId,
+    )
+
+    const mergedLines: CartLine[] =
+      isSamePhoneTableSession && activePlacedOrder ? [...activePlacedOrder.lines] : []
+    for (const incoming of lines) {
+      const sig = JSON.stringify(incoming.selections)
+      const idx = mergedLines.findIndex(
+        (l) => l.itemId === incoming.itemId && JSON.stringify(l.selections) === sig && l.notes === incoming.notes,
+      )
+      if (idx >= 0) {
+        mergedLines[idx] = { ...mergedLines[idx], qty: mergedLines[idx].qty + incoming.qty }
+      } else {
+        mergedLines.push(incoming)
+      }
+    }
+
+    const finalRef = isSamePhoneTableSession && activePlacedOrder ? activePlacedOrder.orderRef : orderRef
+    const finalTotal =
+      isSamePhoneTableSession && activePlacedOrder ? activePlacedOrder.total + orderTotal : orderTotal
+
     const newRecord: PlacedOrder = {
       id: crypto.randomUUID(),
-      orderRef,
+      orderRef: finalRef,
       mode: params.mode,
       table: params.table,
-      lines: [...lines],
-      total: orderTotal,
+      lines: mergedLines,
+      total: finalTotal,
       pacing,
       customerName,
       customerPhone,
-      note,
+      note: note.trim() || (isSamePhoneTableSession ? activePlacedOrder?.note ?? '' : ''),
       timestamp: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
       createdAt: Date.now(),
+      deviceId: activeDevId,
     }
 
     if (params.mode === 'dine-in' && params.table) {
-      bindTableOrder(params.table, orderRef, lines, orderTotal)
+      bindTableOrder(params.table, finalRef, lines, orderTotal, activeDevId)
     }
 
     const updated = [newRecord, ...pastOrders.slice(0, 9)]
     setPastOrders(updated)
     try {
-      localStorage.setItem('fornello_order_history_v1', JSON.stringify(updated))
-      localStorage.setItem('fornello_placed_order_v1', JSON.stringify(newRecord))
-      localStorage.removeItem('fornello_cart_v1')
+      localStorage.setItem(`fornello_order_history_${activeDevId}`, JSON.stringify(updated))
+      localStorage.setItem(`fornello_placed_order_${activeDevId}`, JSON.stringify(newRecord))
+      localStorage.removeItem(`fornello_cart_${activeDevId}`)
     } catch {}
 
     setActivePlacedOrder(newRecord)
@@ -379,10 +439,28 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
   }
 
   const clearActivePlacedOrder = () => {
+    const activeDevId = deviceId === 'DEV-INIT' ? getOrCreateDeviceId() : deviceId
     setActivePlacedOrder(null)
     try {
-      localStorage.removeItem('fornello_placed_order_v1')
+      localStorage.removeItem(`fornello_placed_order_${activeDevId}`)
     } catch {}
+  }
+
+  const simulateNewCustomerPhone = () => {
+    const freshDeviceId = rotateDeviceId()
+    setDeviceId(freshDeviceId)
+    setLines([])
+    setActivePlacedOrder(null)
+    setPastOrders([])
+    setNote('')
+    setCustomerName('')
+    setCustomerPhone('')
+    setOrderRef(generateOrderRef())
+    showToast(
+      params.lang === 'ckb'
+        ? `📱 مۆبایلی میوانی نوێ چالاککرا (${freshDeviceId}) — جیاکراوەتەوە لە میوانی پێشوو`
+        : `📱 New customer phone active (${freshDeviceId}) — isolated from previous guest!`,
+    )
   }
 
   const simulateTableScan = (targetTable: number | null) => {
@@ -414,6 +492,7 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
   const value: OrderContextValue = {
     ...params,
     t: STRINGS[params.lang],
+    deviceId,
     isTableVerified,
     verifiedTable,
     lines,
@@ -446,6 +525,7 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
       update({ table: verifiedTable, mode: 'dine-in' })
     },
     simulateTableScan,
+    simulateNewCustomerPhone,
     addLine,
     updateLine,
     setQty,

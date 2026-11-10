@@ -1,6 +1,6 @@
 'use client'
 
-import { FlaskConical, Lock, QrCode, Share2, ShoppingBag, Utensils } from 'lucide-react'
+import { FlaskConical, Lock, QrCode, Share2, ShoppingBag, Smartphone, Utensils } from 'lucide-react'
 import { useState } from 'react'
 import { SITE } from '@/lib/i18n'
 import { padTable, type Mode } from '@/lib/order'
@@ -16,7 +16,19 @@ const MODES: { id: Mode; Icon: typeof Utensils }[] = [
 const IS_DEV = process.env.NODE_ENV === 'development'
 
 export function ModeSwitcher({ id }: { id: string }) {
-  const { lang, mode, table, verifiedTable, isTableVerified, setMode, simulateTableScan, t, showToast } = useOrder()
+  const {
+    lang,
+    mode,
+    table,
+    deviceId,
+    verifiedTable,
+    isTableVerified,
+    setMode,
+    simulateTableScan,
+    simulateNewCustomerPhone,
+    t,
+    showToast,
+  } = useOrder()
   const [showQrHint, setShowQrHint] = useState(false)
   const hasVerifiedTable = Boolean(verifiedTable || (table && isTableVerified))
 
@@ -137,28 +149,39 @@ export function ModeSwitcher({ id }: { id: string }) {
 
       {IS_DEV ? (
         <div className="flex flex-col gap-2 rounded-2xl border border-dashed border-amber-500/40 bg-amber-500/10 p-3">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <label htmlFor={`${id}-dev-sim`} className="flex items-center gap-1.5 text-xs font-semibold text-amber-300">
               <FlaskConical className="size-3.5 shrink-0" aria-hidden="true" />
               <span>{lang === 'ckb' ? 'دۆخی گەشەپێدەر · تاقیکردنەوەی مێزەکان' : 'Dev Mode · Simulate Table QR'}</span>
             </label>
-            <select
-              id={`${id}-dev-sim`}
-              value={mode === 'dine-in' && table ? String(table) : ''}
-              onChange={(e) => {
-                const val = e.target.value
-                simulateTableScan(val ? Number(val) : null)
-                setShowQrHint(false)
-              }}
-              className="h-8 rounded-full border border-amber-500/40 bg-background px-3 text-xs font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-ring"
-            >
-              <option value="">{lang === 'ckb' ? 'سەفەری (ماڵەوە / دەرەوە)' : 'Takeaway (Home / Outside)'}</option>
-              {Array.from({ length: SITE.tableCount }, (_, i) => i + 1).map((n) => (
-                <option key={n} value={n}>
-                  {`${t.table} ${padTable(n)}`}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={simulateNewCustomerPhone}
+                title="Simulate a brand-new customer phone scanning this table"
+                className="flex h-8 items-center gap-1.5 rounded-full border border-amber-400/50 bg-amber-400/15 px-2.5 text-[11px] font-semibold text-amber-200 hover:bg-amber-400 hover:text-amber-950 transition-colors"
+              >
+                <Smartphone className="size-3.5 shrink-0" aria-hidden="true" />
+                <span>{lang === 'ckb' ? `مۆبایلی نوێ (${deviceId})` : `New Phone (${deviceId})`}</span>
+              </button>
+              <select
+                id={`${id}-dev-sim`}
+                value={mode === 'dine-in' && table ? String(table) : ''}
+                onChange={(e) => {
+                  const val = e.target.value
+                  simulateTableScan(val ? Number(val) : null)
+                  setShowQrHint(false)
+                }}
+                className="h-8 rounded-full border border-amber-500/40 bg-background px-3 text-xs font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+              >
+                <option value="">{lang === 'ckb' ? 'سەفەری (ماڵەوە / دەرەوە)' : 'Takeaway (Home / Outside)'}</option>
+                {Array.from({ length: SITE.tableCount }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={n}>
+                    {`${t.table} ${padTable(n)}`}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="no-scrollbar flex items-center gap-1 overflow-x-auto pt-0.5">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
