@@ -226,7 +226,9 @@ export function WaiterTicket({ open, time, onBack, onFinish }: WaiterTicketProps
         <div className="flex flex-col gap-2.5 border-t-2 border-background px-4 pt-3.5 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-5 sm:pt-4">
           <div className="flex items-baseline justify-between">
             <span className="font-display text-xl tracking-wide uppercase">{t.total}</span>
-            <span className="text-2xl sm:text-3xl font-semibold tabular-nums">{formatIQD(cartTotal(activeLines))}</span>
+            <span className="text-2xl sm:text-3xl font-semibold tabular-nums">
+              {formatIQD(Math.max(activePlacedOrder?.total ?? 0, cartTotal(activeLines)))}
+            </span>
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row">

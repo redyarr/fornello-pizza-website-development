@@ -777,7 +777,7 @@ export function MenuManager() {
                       : 'border-border hover:bg-foreground/10',
                   )}
                 >
-                  {t.categoryNames[cat.id]}
+                  {cat.title[lang] || t.categoryNames[cat.id]}
                 </button>
               ))}
             </div>
@@ -1790,7 +1790,7 @@ function AddItemModal({
               >
                 {CATEGORIES.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {t.categoryNames[c.id]}
+                    {c.title[lang] || t.categoryNames[c.id]}
                   </option>
                 ))}
               </select>
@@ -2018,7 +2018,7 @@ function EditItemModal({
               >
                 {CATEGORIES.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {t.categoryNames[c.id]}
+                    {c.title[lang] || t.categoryNames[c.id]}
                   </option>
                 ))}
               </select>
