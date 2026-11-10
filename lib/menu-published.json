@@ -1,4 +1,580 @@
 {
-  "customItems": [],
-  "overrides": {}
+  "customItems": [
+    {
+      "id": "custom--3901",
+      "category": "pizza",
+      "name": "شت",
+      "description": {
+        "en": "سسس",
+        "ckb": "سسس"
+      },
+      "price": 6500,
+      "tags": [
+        "spicy"
+      ],
+      "image": "/images/al-taglio.png",
+      "groups": [],
+      "custom": true,
+      "soldOut": false
+    }
+  ],
+  "overrides": {
+    "fornello-beef": {
+      "soldOut": false
+    }
+  },
+  "modifierGroups": {
+    "myFornello": {
+      "id": "myFornello",
+      "label": {
+        "en": "Your three ingredients",
+        "ckb": "سێ پێکهاتەکەت هەڵبژێرە"
+      },
+      "min": 3,
+      "max": 3,
+      "alwaysShow": true,
+      "options": [
+        {
+          "id": "beef",
+          "label": {
+            "en": "Beef",
+            "ckb": "گۆشتی گوێرەکە"
+          },
+          "price": 0
+        },
+        {
+          "id": "chicken",
+          "label": {
+            "en": "Chicken",
+            "ckb": "مریشک"
+          },
+          "price": 0
+        },
+        {
+          "id": "minced",
+          "label": {
+            "en": "Minced meat",
+            "ckb": "قیمە"
+          },
+          "price": 0
+        },
+        {
+          "id": "pepperoni",
+          "label": {
+            "en": "Pepperoni",
+            "ckb": "پێپەرۆنی"
+          },
+          "price": 0
+        },
+        {
+          "id": "salami",
+          "label": {
+            "en": "Salami",
+            "ckb": "سەلامی"
+          },
+          "price": 0
+        },
+        {
+          "id": "tuna",
+          "label": {
+            "en": "Tuna",
+            "ckb": "ماسی توونە"
+          },
+          "price": 0
+        },
+        {
+          "id": "mushroom",
+          "label": {
+            "en": "Mushroom",
+            "ckb": "قارچک"
+          },
+          "price": 0
+        },
+        {
+          "id": "olives",
+          "label": {
+            "en": "Olives",
+            "ckb": "زەیتوون"
+          },
+          "price": 0
+        },
+        {
+          "id": "arugula",
+          "label": {
+            "en": "Arugula",
+            "ckb": "جەرجیر"
+          },
+          "price": 0
+        },
+        {
+          "id": "cherry-tomato",
+          "label": {
+            "en": "Cherry tomato",
+            "ckb": "تەماتەی چێری"
+          },
+          "price": 0
+        },
+        {
+          "id": "zucchini",
+          "label": {
+            "en": "Zucchini",
+            "ckb": "کولەکە"
+          },
+          "price": 0
+        },
+        {
+          "id": "eggplant",
+          "label": {
+            "en": "Eggplant",
+            "ckb": "باینجان"
+          },
+          "price": 0
+        },
+        {
+          "id": "pepper",
+          "label": {
+            "en": "Peppers",
+            "ckb": "بیبەر"
+          },
+          "price": 0
+        },
+        {
+          "id": "mozzarella",
+          "label": {
+            "en": "Mozzarella",
+            "ckb": "پەنیری مۆزارێلا"
+          },
+          "price": 0
+        },
+        {
+          "id": "feta",
+          "label": {
+            "en": "Feta",
+            "ckb": "پەنیری فێتا"
+          },
+          "price": 0
+        }
+      ]
+    },
+    "crust": {
+      "id": "crust",
+      "label": {
+        "en": "Crust",
+        "ckb": "جۆری هەویر"
+      },
+      "min": 1,
+      "max": 1,
+      "defaults": [
+        "classic"
+      ],
+      "options": [
+        {
+          "id": "classic",
+          "label": {
+            "en": "Classic",
+            "ckb": "ئاسایی (کلاسیک)"
+          },
+          "price": 0
+        },
+        {
+          "id": "thin",
+          "label": {
+            "en": "Thin & crisp",
+            "ckb": "تەنک و قرچۆک"
+          },
+          "price": 0
+        },
+        {
+          "id": "well-done",
+          "label": {
+            "en": "Well done",
+            "ckb": "زیاتر برژاو"
+          },
+          "price": 0
+        }
+      ]
+    },
+    "extras": {
+      "id": "extras",
+      "label": {
+        "en": "Extra toppings",
+        "ckb": "پێکهاتەی زیادە"
+      },
+      "min": 0,
+      "max": 4,
+      "options": [
+        {
+          "id": "beef",
+          "label": {
+            "en": "Beef",
+            "ckb": "گۆشتی گوێرەکە"
+          },
+          "price": 1000
+        },
+        {
+          "id": "chicken",
+          "label": {
+            "en": "Chicken",
+            "ckb": "مریشک"
+          },
+          "price": 1000
+        },
+        {
+          "id": "minced",
+          "label": {
+            "en": "Minced meat",
+            "ckb": "قیمە"
+          },
+          "price": 1000
+        },
+        {
+          "id": "pepperoni",
+          "label": {
+            "en": "Pepperoni",
+            "ckb": "پێپەرۆنی"
+          },
+          "price": 1000
+        },
+        {
+          "id": "salami",
+          "label": {
+            "en": "Salami",
+            "ckb": "سەلامی"
+          },
+          "price": 1000
+        },
+        {
+          "id": "tuna",
+          "label": {
+            "en": "Tuna",
+            "ckb": "ماسی توونە"
+          },
+          "price": 1000
+        },
+        {
+          "id": "mushroom",
+          "label": {
+            "en": "Mushroom",
+            "ckb": "قارچک"
+          },
+          "price": 1000
+        },
+        {
+          "id": "olives",
+          "label": {
+            "en": "Olives",
+            "ckb": "زەیتوون"
+          },
+          "price": 1000
+        },
+        {
+          "id": "arugula",
+          "label": {
+            "en": "Arugula",
+            "ckb": "جەرجیر"
+          },
+          "price": 1000
+        },
+        {
+          "id": "cherry-tomato",
+          "label": {
+            "en": "Cherry tomato",
+            "ckb": "تەماتەی چێری"
+          },
+          "price": 1000
+        },
+        {
+          "id": "zucchini",
+          "label": {
+            "en": "Zucchini",
+            "ckb": "کولەکە"
+          },
+          "price": 1000
+        },
+        {
+          "id": "eggplant",
+          "label": {
+            "en": "Eggplant",
+            "ckb": "باینجان"
+          },
+          "price": 1000
+        },
+        {
+          "id": "pepper",
+          "label": {
+            "en": "Peppers",
+            "ckb": "بیبەر"
+          },
+          "price": 1000
+        },
+        {
+          "id": "mozzarella",
+          "label": {
+            "en": "Mozzarella",
+            "ckb": "پەنیری مۆزارێلا"
+          },
+          "price": 1000
+        },
+        {
+          "id": "feta",
+          "label": {
+            "en": "Feta",
+            "ckb": "پەنیری فێتا"
+          },
+          "price": 1000
+        }
+      ]
+    },
+    "dips": {
+      "id": "dips",
+      "label": {
+        "en": "Dipping sauces",
+        "ckb": "سۆسەکان"
+      },
+      "min": 0,
+      "max": 3,
+      "options": [
+        {
+          "id": "fornello-mayo",
+          "label": {
+            "en": "Fornello mayo",
+            "ckb": "مایۆنیزی تایبەتی فۆڕنێڵۆ"
+          },
+          "price": 500
+        },
+        {
+          "id": "curry-mayo",
+          "label": {
+            "en": "Curry mayo",
+            "ckb": "مایۆنیزی کاری"
+          },
+          "price": 500
+        },
+        {
+          "id": "hot-sauce",
+          "label": {
+            "en": "Hot sauce",
+            "ckb": "سۆسی توون"
+          },
+          "price": 500
+        },
+        {
+          "id": "pesto",
+          "label": {
+            "en": "Pesto",
+            "ckb": "سۆسی پێستۆ"
+          },
+          "price": 500
+        },
+        {
+          "id": "alfredo",
+          "label": {
+            "en": "Alfredo",
+            "ckb": "سۆسی ئەلفرێدۆ"
+          },
+          "price": 500
+        },
+        {
+          "id": "banana-839",
+          "label": {
+            "en": "banana",
+            "ckb": "بەنانە"
+          },
+          "price": 500
+        }
+      ]
+    },
+    "potatoSize": {
+      "id": "potatoSize",
+      "label": {
+        "en": "Size",
+        "ckb": "قەبارە"
+      },
+      "min": 1,
+      "max": 1,
+      "defaults": [
+        "small"
+      ],
+      "alwaysShow": true,
+      "options": [
+        {
+          "id": "small",
+          "label": {
+            "en": "Small",
+            "ckb": "بچووک"
+          },
+          "price": 0
+        },
+        {
+          "id": "large",
+          "label": {
+            "en": "Large",
+            "ckb": "گەورە"
+          },
+          "price": 500
+        }
+      ]
+    },
+    "temperature": {
+      "id": "temperature",
+      "label": {
+        "en": "Hot or iced",
+        "ckb": "گەرم یان سارد"
+      },
+      "min": 1,
+      "max": 1,
+      "defaults": [
+        "hot"
+      ],
+      "alwaysShow": true,
+      "options": [
+        {
+          "id": "hot",
+          "label": {
+            "en": "Hot",
+            "ckb": "گەرم"
+          },
+          "price": 0
+        },
+        {
+          "id": "iced",
+          "label": {
+            "en": "Iced",
+            "ckb": "سارد (ئایس)"
+          },
+          "price": 0
+        }
+      ]
+    },
+    "milk": {
+      "id": "milk",
+      "label": {
+        "en": "Milk",
+        "ckb": "جۆری شیر"
+      },
+      "min": 1,
+      "max": 1,
+      "defaults": [
+        "whole"
+      ],
+      "options": [
+        {
+          "id": "whole",
+          "label": {
+            "en": "Whole milk",
+            "ckb": "شیری ئاسایی"
+          },
+          "price": 0
+        },
+        {
+          "id": "low-fat",
+          "label": {
+            "en": "Low-fat milk",
+            "ckb": "شیری کەم چەوری"
+          },
+          "price": 0
+        },
+        {
+          "id": "oat",
+          "label": {
+            "en": "Oat milk",
+            "ckb": "شیری شۆفان"
+          },
+          "price": 500
+        },
+        {
+          "id": "almond",
+          "label": {
+            "en": "Almond milk",
+            "ckb": "شیری بادەم"
+          },
+          "price": 500
+        }
+      ]
+    },
+    "shots": {
+      "id": "shots",
+      "label": {
+        "en": "Extra espresso",
+        "ckb": "شۆتی ئێسپرێسۆی زیادە"
+      },
+      "min": 1,
+      "max": 1,
+      "defaults": [
+        "none"
+      ],
+      "options": [
+        {
+          "id": "none",
+          "label": {
+            "en": "No extra shot",
+            "ckb": "بێ شۆتی زیادە"
+          },
+          "price": 0
+        },
+        {
+          "id": "one",
+          "label": {
+            "en": "+1 shot",
+            "ckb": "+١ شۆت"
+          },
+          "price": 500
+        },
+        {
+          "id": "two",
+          "label": {
+            "en": "+2 shots",
+            "ckb": "+٢ شۆت"
+          },
+          "price": 1000
+        }
+      ]
+    },
+    "sweetness": {
+      "id": "sweetness",
+      "label": {
+        "en": "Sweetness",
+        "ckb": "ڕێژەی شەکر"
+      },
+      "min": 1,
+      "max": 1,
+      "defaults": [
+        "regular"
+      ],
+      "options": [
+        {
+          "id": "none",
+          "label": {
+            "en": "No sugar",
+            "ckb": "بێ شەکر"
+          },
+          "price": 0
+        },
+        {
+          "id": "less",
+          "label": {
+            "en": "Less sweet",
+            "ckb": "کەم شەکر"
+          },
+          "price": 0
+        },
+        {
+          "id": "regular",
+          "label": {
+            "en": "Regular",
+            "ckb": "ئاسایی"
+          },
+          "price": 0
+        },
+        {
+          "id": "extra",
+          "label": {
+            "en": "Extra sweet",
+            "ckb": "شیرین (شەکری زیادە)"
+          },
+          "price": 0
+        }
+      ]
+    }
+  }
 }
