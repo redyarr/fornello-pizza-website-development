@@ -11,7 +11,8 @@ import { Sheet } from './sheet'
 export function ItemSheet({ item, onClose }: { item: MenuItem | null; onClose: () => void }) {
   const { editingLine, setEditingLine, menu } = useOrder()
   const editingItem = editingLine ? menu.find((m) => m.id === editingLine.itemId) ?? null : null
-  const activeItem = item ?? editingItem
+  const liveItem = item ? menu.find((m) => m.id === item.id) ?? item : null
+  const activeItem = liveItem ?? editingItem
 
   const handleClose = () => {
     if (editingLine) setEditingLine(null)
