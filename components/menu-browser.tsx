@@ -158,7 +158,7 @@ export function MenuBrowser() {
                     : 'text-foreground/80 hover:bg-foreground/10 hover:text-primary',
                 )}
               >
-                {t.categoryNames[category.id]}
+                {category.title[lang] || t.categoryNames[category.id]}
               </a>
             </li>
           ))}

@@ -180,9 +180,10 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
     } catch {}
   }, [])
 
-  // Listen for menu updates from staff admin studio or storage
+  // Hydrate and listen for menu updates from staff admin studio or storage
   useEffect(() => {
     const onMenuUpdate = () => setMenu(getMergedMenu())
+    onMenuUpdate()
     window.addEventListener('fornello_menu_updated', onMenuUpdate)
     window.addEventListener('storage', onMenuUpdate)
     return () => {
