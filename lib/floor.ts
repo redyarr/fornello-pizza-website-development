@@ -67,6 +67,11 @@ export function rotateDeviceId(): string {
   const fresh = generateRandomDeviceTag()
   if (typeof window !== 'undefined') {
     try {
+      const prev = localStorage.getItem(DEVICE_STORAGE_KEY)
+      if (prev) {
+        localStorage.removeItem(`fornello_cart_${prev}`)
+        localStorage.removeItem(`fornello_placed_order_${prev}`)
+      }
       localStorage.setItem(DEVICE_STORAGE_KEY, fresh)
     } catch {}
   }
