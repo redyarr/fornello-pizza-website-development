@@ -26,5 +26,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# runtime floor state
+# runtime floor & menu state
 .fornello-floor-live.json
+.fornello-menu-live.json
+

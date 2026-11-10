@@ -1,15 +1,15 @@
 'use client'
 
 import { Clock, MessageCircle, Minus, Plus, RotateCcw, SlidersHorizontal, Trash2, X } from 'lucide-react'
-import { getItem } from '@/lib/menu'
 import {
   buildReceipt,
   cartTotal,
-  describeSelections,
+  describeLineSelections,
   formatIQD,
   lineTotal,
   needsPacing,
   prepEstimate,
+  resolveLineItem,
   whatsappUrl,
   type Pacing,
 } from '@/lib/order'
@@ -100,8 +100,7 @@ export function OrderSheet({ open, onClose, onShowTicket, onOrderPlaced }: Order
         ) : (
           <ul className="divide-y divide-dashed divide-foreground/30">
             {lines.map((line) => {
-              const item = getItem(line.itemId)
-              if (!item) return null
+              const item = resolveLineItem(line)
               return (
                 <li key={line.uid} className="flex flex-col gap-3 py-4 first:pt-0">
                   <div className="flex items-start justify-between gap-4">
@@ -109,7 +108,7 @@ export function OrderSheet({ open, onClose, onShowTicket, onOrderPlaced }: Order
                       <p lang="en" className="font-display text-lg leading-snug tracking-wide uppercase">
                         {item.name}
                       </p>
-                      {describeSelections(item, line.selections, lang).map((detail) => (
+                      {describeLineSelections(line, lang).map((detail) => (
                         <p key={detail} className="text-sm leading-relaxed text-muted-foreground">
                           {detail}
                         </p>

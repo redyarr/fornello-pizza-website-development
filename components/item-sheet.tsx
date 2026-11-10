@@ -3,14 +3,16 @@
 import { Minus, Plus, X } from 'lucide-react'
 import { useState } from 'react'
 import { MODIFIER_GROUPS, type MenuItem, type ModifierGroup } from '@/lib/menu'
-import { defaultSelections, formatIQD, isComplete, unitPrice, type Selections } from '@/lib/order'
+import { defaultSelections, formatIQD, isComplete, resolveLineItem, unitPrice, type Selections } from '@/lib/order'
 import { cn } from '@/lib/utils'
 import { useOrder } from './order-provider'
 import { Sheet } from './sheet'
 
 export function ItemSheet({ item, onClose }: { item: MenuItem | null; onClose: () => void }) {
   const { editingLine, setEditingLine, menu } = useOrder()
-  const editingItem = editingLine ? menu.find((m) => m.id === editingLine.itemId) ?? null : null
+  const editingItem = editingLine
+    ? menu.find((m) => m.id === editingLine.itemId) ?? resolveLineItem(editingLine)
+    : null
   const liveItem = item ? menu.find((m) => m.id === item.id) ?? item : null
   const activeItem = liveItem ?? editingItem
 

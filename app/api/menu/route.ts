@@ -3,7 +3,7 @@ import path from 'node:path'
 import type { MenuStoreData } from '@/lib/menu'
 import publishedDefault from '@/lib/menu-published.json'
 
-const PUBLISHED_JSON_PATH = path.join(process.cwd(), 'lib', 'menu-published.json')
+const LIVE_MENU_JSON_PATH = path.join(process.cwd(), '.fornello-menu-live.json')
 
 let memoryMenuStore: MenuStoreData = {
   customItems: Array.isArray((publishedDefault as MenuStoreData).customItems)
@@ -15,11 +15,12 @@ let memoryMenuStore: MenuStoreData = {
       : {},
   modifierGroups: (publishedDefault as MenuStoreData).modifierGroups,
   categoryOverrides: (publishedDefault as MenuStoreData).categoryOverrides,
+  updatedAt: (publishedDefault as MenuStoreData).updatedAt ?? 0,
 }
 
 async function readMenuStore(): Promise<MenuStoreData> {
   try {
-    const raw = await fs.readFile(PUBLISHED_JSON_PATH, 'utf-8')
+    const raw = await fs.readFile(LIVE_MENU_JSON_PATH, 'utf-8')
     const parsed = JSON.parse(raw) as MenuStoreData
     if (parsed && typeof parsed === 'object') {
       memoryMenuStore = {
@@ -27,10 +28,11 @@ async function readMenuStore(): Promise<MenuStoreData> {
         overrides: typeof parsed.overrides === 'object' && parsed.overrides ? parsed.overrides : {},
         modifierGroups: parsed.modifierGroups,
         categoryOverrides: parsed.categoryOverrides,
+        updatedAt: typeof parsed.updatedAt === 'number' ? parsed.updatedAt : Date.now(),
       }
     }
   } catch {
-    // Fallback to memoryMenuStore on read-only serverless filesystems
+    // Fallback to memoryMenuStore / publishedDefault when .fornello-menu-live.json doesn't exist yet
   }
   return memoryMenuStore
 }
@@ -53,10 +55,11 @@ export async function POST(request: Request) {
       overrides: typeof body.overrides === 'object' && body.overrides ? body.overrides : {},
       modifierGroups: body.modifierGroups,
       categoryOverrides: body.categoryOverrides,
+      updatedAt: typeof body.updatedAt === 'number' && body.updatedAt > 0 ? body.updatedAt : Date.now(),
     }
     memoryMenuStore = sanitized
     try {
-      await fs.writeFile(PUBLISHED_JSON_PATH, `${JSON.stringify(sanitized, null, 2)}\n`, 'utf-8')
+      await fs.writeFile(LIVE_MENU_JSON_PATH, `${JSON.stringify(sanitized, null, 2)}\n`, 'utf-8')
     } catch {
       // Ignore write error on read-only serverless edge; memoryMenuStore stays updated for warm instance
     }
@@ -65,3 +68,4 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Failed to process menu update' }, { status: 500 })
   }
 }
+

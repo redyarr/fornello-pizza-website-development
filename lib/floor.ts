@@ -4,7 +4,7 @@
 // Provides portable QR token payload encoding for instant device-to-device syncing without a backend.
 
 import { SITE } from './i18n'
-import type { CartLine } from './order'
+import { cartTotal, type CartLine } from './order'
 
 export type TableCallType = 'waiter' | 'bill' | 'water' | 'cutlery'
 
@@ -277,6 +277,8 @@ export function bindTableOrder(
     if (matchIdx >= 0) {
       mergedLines[matchIdx] = {
         ...mergedLines[matchIdx],
+        ...incoming,
+        uid: mergedLines[matchIdx].uid,
         qty: mergedLines[matchIdx].qty + incoming.qty,
       }
     } else {
@@ -284,7 +286,8 @@ export function bindTableOrder(
     }
   }
 
-  const finalTotal = isSamePhoneSession && prevRecord ? prevRecord.total + total : total
+  const rawTotal = isSamePhoneSession && prevRecord ? prevRecord.total + total : total
+  const finalTotal = Math.max(rawTotal, cartTotal(mergedLines))
   const finalCall =
     existingCall && (!existingCall.deviceId || existingCall.deviceId === activeDeviceId)
       ? existingCall

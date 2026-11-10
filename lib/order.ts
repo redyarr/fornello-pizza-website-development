@@ -1,11 +1,21 @@
 import { SITE, type Strings } from './i18n'
-import { getItem, MODIFIER_GROUPS, PREP_MINUTES, type Lang, type MenuItem } from './menu'
+import { getItem, MODIFIER_GROUPS, PREP_MINUTES, type CategoryId, type Lang, type MenuItem } from './menu'
 import { generateTableSignature, verifyTableSignature } from './table-token'
 
 export type Mode = 'dine-in' | 'takeaway'
 export type Pacing = 'now' | 'together' | 'after'
 export type Selections = Record<string, string[]>
-export type CartLine = { uid: string; itemId: string; qty: number; selections: Selections; notes?: string }
+export type CartLine = {
+  uid: string
+  itemId: string
+  qty: number
+  selections: Selections
+  notes?: string
+  itemName?: string
+  itemCategory?: CategoryId
+  unitPriceSnapshot?: number
+  selectionDetails?: { en: string[]; ckb: string[] }
+}
 export type OrderParams = { mode: Mode; table: number | null; lang: Lang }
 
 export function formatIQD(amount: number): string {
@@ -85,9 +95,44 @@ export function describeSelections(item: MenuItem, selections: Selections, lang:
   })
 }
 
+export function resolveLineItem(line: CartLine): MenuItem {
+  const found = getItem(line.itemId)
+  if (found) return found
+  return {
+    id: line.itemId,
+    category: line.itemCategory ?? 'pizza',
+    name: line.itemName ?? 'Custom Item',
+    price: line.unitPriceSnapshot ?? 0,
+    tags: [],
+    groups: Object.keys(line.selections ?? {}),
+  }
+}
+
+export function describeLineSelections(line: CartLine, lang: Lang): string[] {
+  const found = getItem(line.itemId)
+  if (found) {
+    const liveDetails = describeSelections(found, line.selections, lang)
+    if (liveDetails.length > 0) return liveDetails
+  }
+  const snap = line.selectionDetails?.[lang]
+  if (Array.isArray(snap) && snap.length > 0) return snap
+  if (found) return []
+  const fallbackItem = resolveLineItem(line)
+  return describeSelections(fallbackItem, line.selections, lang)
+}
+
 export function lineTotal(line: CartLine): number {
   const item = getItem(line.itemId)
-  return item ? unitPrice(item, line.selections) * line.qty : 0
+  if (item) {
+    const computed = unitPrice(item, line.selections)
+    const unit = line.unitPriceSnapshot !== undefined ? Math.max(computed, line.unitPriceSnapshot) : computed
+    return unit * line.qty
+  }
+  if (line.unitPriceSnapshot !== undefined) {
+    return line.unitPriceSnapshot * line.qty
+  }
+  const fallback = resolveLineItem(line)
+  return unitPrice(fallback, line.selections) * line.qty
 }
 
 export function cartTotal(lines: CartLine[]): number {
@@ -99,13 +144,13 @@ export function cartCount(lines: CartLine[]): number {
 }
 
 export function needsPacing(lines: CartLine[]): boolean {
-  const categories = lines.map((line) => getItem(line.itemId)?.category)
+  const categories = lines.map((line) => resolveLineItem(line).category)
   return categories.includes('coffee') && categories.some((c) => c && c !== 'coffee')
 }
 
 export function prepEstimate(lines: CartLine[]): [number, number] {
-  const items = lines.map((line) => ({ line, item: getItem(line.itemId) }))
-  const base = Math.max(0, ...items.map(({ item }) => (item ? PREP_MINUTES[item.category] : 0)))
+  const items = lines.map((line) => ({ line, item: resolveLineItem(line) }))
+  const base = Math.max(0, ...items.map(({ item }) => (item ? PREP_MINUTES[item.category] ?? 10 : 0)))
   const pizzas = items.reduce((n, { line, item }) => n + (item?.category === 'pizza' ? line.qty : 0), 0)
   const low = Math.ceil((base + Math.min(10, Math.max(0, pizzas - 1) * 2)) / 5) * 5
   return [low, low + 5]
@@ -153,10 +198,9 @@ export function buildReceipt({
   }
   out.push('')
   for (const line of lines) {
-    const item = getItem(line.itemId)
-    if (!item) continue
+    const item = resolveLineItem(line)
     out.push(`${line.qty}× ${item.name} — ${formatIQD(lineTotal(line))}`)
-    for (const detail of describeSelections(item, line.selections, lang)) out.push(`   · ${detail}`)
+    for (const detail of describeLineSelections(line, lang)) out.push(`   · ${detail}`)
     if (line.notes?.trim()) out.push(`   · 📝 ${line.notes.trim()}`)
   }
   if (note.trim()) out.push('', `${t.note}: ${note.trim()}`)

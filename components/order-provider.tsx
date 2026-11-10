@@ -4,7 +4,18 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { bindTableOrder, getInitialFloorState, getOrCreateDeviceId, rotateDeviceId, syncRemoteFloorState } from '@/lib/floor'
 import { STRINGS, type Strings } from '@/lib/i18n'
 import { getMergedMenu, syncRemoteMenuData, type Lang, type MenuItem } from '@/lib/menu'
-import { cartTotal, orderQuery, type CartLine, type Mode, type OrderParams, type Pacing, type Selections } from '@/lib/order'
+import {
+  cartTotal,
+  describeSelections,
+  orderQuery,
+  resolveLineItem,
+  unitPrice,
+  type CartLine,
+  type Mode,
+  type OrderParams,
+  type Pacing,
+  type Selections,
+} from '@/lib/order'
 import { playSuccessChime } from '@/lib/sound'
 import { generateTableSignature, verifyTableSignature } from '@/lib/table-token'
 
@@ -327,27 +338,76 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
   const addLine = (item: MenuItem, selections: Selections, qty: number, lineNotes?: string) => {
     const signature = JSON.stringify(selections)
     const trimmedNotes = lineNotes?.trim() || undefined
+    const unitPriceSnapshot = unitPrice(item, selections)
+    const selectionDetails = {
+      en: describeSelections(item, selections, 'en'),
+      ckb: describeSelections(item, selections, 'ckb'),
+    }
     setLines((prev) => {
       const match = prev.find(
         (l) => l.itemId === item.id && JSON.stringify(l.selections) === signature && l.notes === trimmedNotes,
       )
-      if (match) return prev.map((l) => (l === match ? { ...l, qty: l.qty + qty } : l))
-      return [...prev, { uid: crypto.randomUUID(), itemId: item.id, qty, selections, notes: trimmedNotes }]
+      if (match) {
+        return prev.map((l) =>
+          l === match
+            ? {
+                ...l,
+                qty: l.qty + qty,
+                itemName: item.name,
+                itemCategory: item.category,
+                unitPriceSnapshot,
+                selectionDetails,
+              }
+            : l,
+        )
+      }
+      return [
+        ...prev,
+        {
+          uid: crypto.randomUUID(),
+          itemId: item.id,
+          qty,
+          selections,
+          notes: trimmedNotes,
+          itemName: item.name,
+          itemCategory: item.category,
+          unitPriceSnapshot,
+          selectionDetails,
+        },
+      ]
     })
     showToast(STRINGS[params.lang].itemAddedToast(item.name, qty))
   }
 
   const updateLine = (uid: string, selections: Selections, qty: number, lineNotes?: string) => {
     const trimmedNotes = lineNotes?.trim() || undefined
+    const targetLine = lines.find((l) => l.uid === uid)
+    const resolvedItem = targetLine
+      ? menu.find((m) => m.id === targetLine.itemId) ?? resolveLineItem(targetLine)
+      : null
     setLines((prev) =>
       qty <= 0
         ? prev.filter((l) => l.uid !== uid)
-        : prev.map((l) => (l.uid === uid ? { ...l, selections, qty, notes: trimmedNotes } : l)),
+        : prev.map((l) => {
+            if (l.uid !== uid) return l
+            const itemObj = resolvedItem ?? resolveLineItem(l)
+            return {
+              ...l,
+              selections,
+              qty,
+              notes: trimmedNotes,
+              itemName: itemObj.name,
+              itemCategory: itemObj.category,
+              unitPriceSnapshot: unitPrice(itemObj, selections),
+              selectionDetails: {
+                en: describeSelections(itemObj, selections, 'en'),
+                ckb: describeSelections(itemObj, selections, 'ckb'),
+              },
+            }
+          }),
     )
-    const line = lines.find((l) => l.uid === uid)
-    if (line) {
-      const item = menu.find((m) => m.id === line.itemId)
-      if (item) showToast(STRINGS[params.lang].itemUpdatedToast(item.name))
+    if (resolvedItem) {
+      showToast(STRINGS[params.lang].itemUpdatedToast(resolvedItem.name))
     }
   }
 

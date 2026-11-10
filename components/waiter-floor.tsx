@@ -51,8 +51,8 @@ import {
   type TableOrderRecord,
 } from '@/lib/floor'
 import { SITE, STRINGS } from '@/lib/i18n'
-import { getItem, syncRemoteMenuData, type Lang } from '@/lib/menu'
-import { describeSelections, formatIQD, lineTotal, padTable } from '@/lib/order'
+import { syncDynamicMenuGlobals, syncRemoteMenuData, type Lang } from '@/lib/menu'
+import { cartTotal, describeLineSelections, formatIQD, lineTotal, padTable, resolveLineItem } from '@/lib/order'
 import { playBellChime } from '@/lib/sound'
 import { cn } from '@/lib/utils'
 import { Sheet } from './sheet'
@@ -74,6 +74,7 @@ export function WaiterFloor() {
 
   // Live floor state
   const [floorState, setFloorState] = useState<FloorState>(() => getInitialFloorState())
+  const [, setMenuVersion] = useState(0)
   const [selectedTable, setSelectedTable] = useState<number | null>(null)
   const [filter, setFilter] = useState<'all' | 'calling' | 'occupied' | 'available'>('all')
   const [soundEnabled, setSoundEnabled] = useState(true)
@@ -118,8 +119,14 @@ export function WaiterFloor() {
   // Live Floor Synchronization (Cross-Phone API + BroadcastChannel + LocalStorage Events)
   useEffect(() => {
     const handleUpdate = () => {
+      syncDynamicMenuGlobals()
       const fresh = getInitialFloorState()
       setFloorState(fresh)
+    }
+
+    const handleMenuUpdate = () => {
+      syncDynamicMenuGlobals()
+      setMenuVersion((v) => v + 1)
     }
 
     handleUpdate()
@@ -129,6 +136,7 @@ export function WaiterFloor() {
     const pollTimer = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
       void syncRemoteFloorState()
+      void syncRemoteMenuData()
     }, 2500)
 
     const onFocus = () => {
@@ -141,6 +149,7 @@ export function WaiterFloor() {
       bc = new BroadcastChannel('fornello_floor_mesh_channel')
       bc.onmessage = (event) => {
         if (event.data?.payload) {
+          syncDynamicMenuGlobals()
           setFloorState(event.data.payload as FloorState)
         } else {
           handleUpdate()
@@ -149,6 +158,7 @@ export function WaiterFloor() {
     }
 
     window.addEventListener('fornello_floor_updated', handleUpdate)
+    window.addEventListener('fornello_menu_updated', handleMenuUpdate)
     window.addEventListener('storage', handleUpdate)
     window.addEventListener('focus', onFocus)
 
@@ -156,6 +166,7 @@ export function WaiterFloor() {
       clearInterval(pollTimer)
       if (bc) bc.close()
       window.removeEventListener('fornello_floor_updated', handleUpdate)
+      window.removeEventListener('fornello_menu_updated', handleMenuUpdate)
       window.removeEventListener('storage', handleUpdate)
       window.removeEventListener('focus', onFocus)
     }
@@ -280,7 +291,10 @@ export function WaiterFloor() {
     .filter(([_, call]) => Boolean(call))
     .map(([num, call]) => ({ table: Number(num), call: call as ActiveTableCall }))
 
-  const totalFloorSales = occupiedTablesList.reduce((sum, item) => sum + item.total, 0)
+  const totalFloorSales = occupiedTablesList.reduce(
+    (sum, item) => sum + Math.max(item.total, cartTotal(item.lines)),
+    0,
+  )
 
   // Filtered tables list
   const filteredTables = TABLES.filter((num) => {
@@ -734,11 +748,11 @@ export function WaiterFloor() {
                     ) : null}
 
                     <p className="line-clamp-2 text-foreground font-medium text-xs leading-snug">
-                      {order.lines.map((l) => `${l.qty}× ${getItem(l.itemId)?.name || 'Item'}`).join(', ')}
+                      {order.lines.map((l) => `${l.qty}× ${resolveLineItem(l).name}`).join(', ')}
                     </p>
 
                     <p className="mt-1 font-semibold text-sm tabular-nums text-primary">
-                      {formatIQD(order.total)}
+                      {formatIQD(Math.max(order.total, cartTotal(order.lines)))}
                     </p>
                   </div>
                 ) : (
@@ -837,8 +851,7 @@ export function WaiterFloor() {
               {/* Order Items Breakdown */}
               <ul className="mt-5 divide-y divide-dashed divide-foreground/20 max-h-[50vh] overflow-y-auto pe-1">
                 {currentTableOrder.lines.map((line) => {
-                  const item = getItem(line.itemId)
-                  if (!item) return null
+                  const item = resolveLineItem(line)
                   return (
                     <li key={line.uid} className="py-3 first:pt-0">
                       <div className="flex items-start justify-between gap-3">
@@ -846,7 +859,7 @@ export function WaiterFloor() {
                           <p className="font-display text-base font-semibold uppercase">
                             {line.qty}× {item.name}
                           </p>
-                          {describeSelections(item, line.selections, lang).map((s) => (
+                          {describeLineSelections(line, lang).map((s) => (
                             <p key={s} className="text-xs text-muted-foreground">{s}</p>
                           ))}
                           {line.notes ? (
@@ -865,7 +878,7 @@ export function WaiterFloor() {
               <div className="flex items-baseline justify-between">
                 <span className="font-display text-lg tracking-wide uppercase">{t.total}</span>
                 <span className="font-display text-3xl font-bold tabular-nums text-primary">
-                  {formatIQD(currentTableOrder.total)}
+                  {formatIQD(Math.max(currentTableOrder.total, cartTotal(currentTableOrder.lines)))}
                 </span>
               </div>
 

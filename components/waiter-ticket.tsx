@@ -5,16 +5,16 @@ import { QRCodeSVG } from 'qrcode.react'
 import { useState } from 'react'
 import { dispatchTableCall, ENABLE_WAITER_QR_SYNC, encodeTableSyncPayload } from '@/lib/floor'
 import { SITE } from '@/lib/i18n'
-import { getItem } from '@/lib/menu'
 import {
   buildReceipt,
   cartTotal,
-  describeSelections,
+  describeLineSelections,
   formatIQD,
   lineTotal,
   needsPacing,
   padTable,
   prepEstimate,
+  resolveLineItem,
   whatsappUrl,
 } from '@/lib/order'
 import { playBellChime } from '@/lib/sound'
@@ -174,8 +174,7 @@ export function WaiterTicket({ open, time, onBack, onFinish }: WaiterTicketProps
 
           <ul className="divide-y divide-dashed divide-background/40">
             {activeLines.map((line) => {
-              const item = getItem(line.itemId)
-              if (!item) return null
+              const item = resolveLineItem(line)
               return (
                 <li key={line.uid} className="flex items-start gap-4 py-4">
                   <span className="w-10 shrink-0 font-display text-3xl leading-none font-semibold tabular-nums">
@@ -185,7 +184,7 @@ export function WaiterTicket({ open, time, onBack, onFinish }: WaiterTicketProps
                     <p lang="en" className="font-display text-2xl leading-tight font-medium tracking-wide uppercase">
                       {item.name}
                     </p>
-                    {describeSelections(item, line.selections, lang).map((detail) => (
+                    {describeLineSelections(line, lang).map((detail) => (
                       <p key={detail} className="leading-relaxed">
                         {detail}
                       </p>

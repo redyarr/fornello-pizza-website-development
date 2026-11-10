@@ -495,7 +495,9 @@ export const MENU: MenuItem[] = [
   },
 ]
 
-const MENU_BY_ID = new Map(MENU.map((item) => [item.id, item]))
+const MENU_BY_ID = new Map<string, MenuItem & { soldOut?: boolean; custom?: boolean }>(
+  MENU.map((item) => [item.id, item]),
+)
 
 function cloneModifierGroups(groups: Record<string, ModifierGroup>): Record<string, ModifierGroup> {
   return Object.fromEntries(
@@ -552,6 +554,7 @@ export type MenuStoreData = {
   overrides: Record<string, MenuItemOverride>
   modifierGroups?: Record<string, ModifierGroup>
   categoryOverrides?: Partial<Record<CategoryId, CategoryOverride>>
+  updatedAt?: number
 }
 
 export const MENU_STORAGE_KEY = 'fornello_menu_store_v1'
@@ -566,6 +569,7 @@ const DEFAULT_PUBLISHED_STORE: MenuStoreData = {
       : {},
   modifierGroups: (publishedDefault as MenuStoreData).modifierGroups,
   categoryOverrides: (publishedDefault as MenuStoreData).categoryOverrides,
+  updatedAt: (publishedDefault as MenuStoreData).updatedAt ?? 0,
 }
 
 export function getStoredMenuData(): MenuStoreData {
@@ -579,6 +583,16 @@ export function getStoredMenuData(): MenuStoreData {
   }
 }
 
+function hasAnyMenuCustomizations(store: MenuStoreData | null | undefined): boolean {
+  if (!store) return false
+  return (
+    (Array.isArray(store.customItems) && store.customItems.length > 0) ||
+    (store.overrides && Object.keys(store.overrides).length > 0) ||
+    Boolean(store.modifierGroups && Object.keys(store.modifierGroups).length > 0) ||
+    Boolean(store.categoryOverrides && Object.keys(store.categoryOverrides).length > 0)
+  )
+}
+
 export async function syncRemoteMenuData(): Promise<MenuStoreData | null> {
   if (typeof window === 'undefined') return null
   try {
@@ -586,9 +600,21 @@ export async function syncRemoteMenuData(): Promise<MenuStoreData | null> {
     if (!res.ok) return null
     const remote = (await res.json()) as MenuStoreData
     if (remote && typeof remote === 'object' && Array.isArray(remote.customItems)) {
+      const local = getStoredMenuData()
+      const remoteUninitialized = !remote.updatedAt && !hasAnyMenuCustomizations(remote)
+      if (remoteUninitialized && hasAnyMenuCustomizations(local)) {
+        // Seed the live server with the browser's existing menu customizations
+        saveStoredMenuData(local)
+        return local
+      }
+      if (remote.updatedAt && local.updatedAt && local.updatedAt > remote.updatedAt) {
+        // Local has newer unsynced edits; push them to server
+        saveStoredMenuData(local)
+        return local
+      }
       const currentRaw = localStorage.getItem(MENU_STORAGE_KEY)
       const nextRaw = JSON.stringify(remote)
-      if (currentRaw !== nextRaw) {
+      if (currentRaw !== nextRaw && (remote.updatedAt || hasAnyMenuCustomizations(remote))) {
         syncDynamicMenuGlobals(remote)
         localStorage.setItem(MENU_STORAGE_KEY, nextRaw)
         window.dispatchEvent(new Event('fornello_menu_updated'))
@@ -601,8 +627,17 @@ export async function syncRemoteMenuData(): Promise<MenuStoreData | null> {
   }
 }
 
+let lastSyncedRaw: string | null = null
+
 export function syncDynamicMenuGlobals(data?: MenuStoreData): void {
   const store = data ?? getStoredMenuData()
+  if (typeof window !== 'undefined' && !data) {
+    try {
+      lastSyncedRaw = localStorage.getItem(MENU_STORAGE_KEY)
+    } catch {}
+  } else if (data) {
+    lastSyncedRaw = JSON.stringify(data)
+  }
 
   // 1. Synchronize MODIFIER_GROUPS in-place so all consumers see live sauces, toppings & options
   const freshGroups = cloneModifierGroups(DEFAULT_MODIFIER_GROUPS)
@@ -641,6 +676,36 @@ export function syncDynamicMenuGlobals(data?: MenuStoreData): void {
       subtitle: override?.subtitle ? { ...cat.subtitle, ...override.subtitle } : cat.subtitle,
     }
   }
+
+  // 3. Synchronize MENU_BY_ID in-place so getItem(id) always resolves custom items & overrides everywhere
+  MENU_BY_ID.clear()
+  const overrides = store.overrides || {}
+  for (const item of MENU) {
+    const override = overrides[item.id]
+    if (override?.deleted) continue
+    if (!override) {
+      MENU_BY_ID.set(item.id, item)
+    } else {
+      MENU_BY_ID.set(item.id, {
+        ...item,
+        name: override.name ?? item.name,
+        price: override.price !== undefined ? override.price : item.price,
+        description: override.description ?? item.description,
+        category: override.category ?? item.category,
+        tags: override.tags ?? item.tags,
+        groups: override.groups ?? item.groups,
+        image: override.image ?? item.image,
+        soldOut: Boolean(override.soldOut),
+      })
+    }
+  }
+  if (Array.isArray(store.customItems)) {
+    for (const custom of store.customItems) {
+      if (custom && custom.id) {
+        MENU_BY_ID.set(custom.id, custom)
+      }
+    }
+  }
 }
 
 export function getMergedModifierGroups(data?: MenuStoreData): Record<string, ModifierGroup> {
@@ -651,13 +716,17 @@ export function getMergedModifierGroups(data?: MenuStoreData): Record<string, Mo
 export function saveStoredMenuData(data: MenuStoreData): void {
   if (typeof window === 'undefined') return
   try {
-    syncDynamicMenuGlobals(data)
-    localStorage.setItem(MENU_STORAGE_KEY, JSON.stringify(data))
+    const stamped: MenuStoreData = {
+      ...data,
+      updatedAt: Date.now(),
+    }
+    syncDynamicMenuGlobals(stamped)
+    localStorage.setItem(MENU_STORAGE_KEY, JSON.stringify(stamped))
     window.dispatchEvent(new Event('fornello_menu_updated'))
     fetch('/api/menu', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      body: JSON.stringify(stamped),
     }).catch(() => {})
   } catch {
     // quota or privacy sandbox fallback
@@ -667,30 +736,12 @@ export function saveStoredMenuData(data: MenuStoreData): void {
 export function getMergedMenu(data?: MenuStoreData): (MenuItem & { soldOut?: boolean; custom?: boolean })[] {
   const store = data ?? getStoredMenuData()
   syncDynamicMenuGlobals(store)
-  const baseMerged = MENU.filter((item) => !store.overrides[item.id]?.deleted).map((item) => {
-    const override = store.overrides[item.id]
-    if (!override) {
-      MENU_BY_ID.set(item.id, item)
-      return item
-    }
-    const merged: MenuItem & { soldOut?: boolean; custom?: boolean } = {
-      ...item,
-      name: override.name ?? item.name,
-      price: override.price !== undefined ? override.price : item.price,
-      description: override.description ?? item.description,
-      category: override.category ?? item.category,
-      tags: override.tags ?? item.tags,
-      groups: override.groups ?? item.groups,
-      image: override.image ?? item.image,
-      soldOut: Boolean(override.soldOut),
-    }
-    MENU_BY_ID.set(merged.id, merged)
-    return merged
+  const overrides = store.overrides || {}
+  const baseMerged = MENU.filter((item) => !overrides[item.id]?.deleted).map((item) => {
+    return MENU_BY_ID.get(item.id) ?? item
   })
-  for (const custom of store.customItems) {
-    MENU_BY_ID.set(custom.id, custom)
-  }
-  return [...baseMerged, ...store.customItems]
+  const customItems = Array.isArray(store.customItems) ? store.customItems : []
+  return [...baseMerged, ...customItems]
 }
 
 export function getItem(
@@ -700,6 +751,16 @@ export function getItem(
   if (menuList) {
     const match = menuList.find((m) => m.id === id)
     if (match) return match
+  }
+  if (typeof window !== 'undefined') {
+    try {
+      const currentRaw = localStorage.getItem(MENU_STORAGE_KEY)
+      if (currentRaw !== lastSyncedRaw || !MENU_BY_ID.has(id)) {
+        syncDynamicMenuGlobals()
+      }
+    } catch {}
+  } else if (!MENU_BY_ID.has(id)) {
+    syncDynamicMenuGlobals()
   }
   return MENU_BY_ID.get(id)
 }
