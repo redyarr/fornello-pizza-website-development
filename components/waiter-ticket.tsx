@@ -1,11 +1,22 @@
 'use client'
 
-import { ArrowLeft, Bell, Check, CheckCircle2, Printer, QrCode } from 'lucide-react'
+import { ArrowLeft, Bell, Check, CheckCircle2, MessageCircle, Printer } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useState } from 'react'
 import { dispatchTableCall, encodeTableSyncPayload } from '@/lib/floor'
+import { SITE } from '@/lib/i18n'
 import { getItem } from '@/lib/menu'
-import { cartTotal, describeSelections, formatIQD, lineTotal, needsPacing, padTable, prepEstimate } from '@/lib/order'
+import {
+  buildReceipt,
+  cartTotal,
+  describeSelections,
+  formatIQD,
+  lineTotal,
+  needsPacing,
+  padTable,
+  prepEstimate,
+  whatsappUrl,
+} from '@/lib/order'
 import { playBellChime } from '@/lib/sound'
 import { useOrder } from './order-provider'
 import { Sheet } from './sheet'
@@ -86,6 +97,20 @@ export function WaiterTicket({ open, time, onBack, onFinish }: WaiterTicketProps
 
         <div className="flex-1 overflow-y-auto px-5 pb-6">
           <div className="flex flex-col items-center gap-2 border-b-2 border-dashed border-background/40 pb-5 text-center">
+            {activePlacedOrder ? (
+              <div className="w-full mb-2 flex items-center justify-center gap-3 rounded-2xl border-2 border-emerald-500/80 bg-emerald-500/20 py-3.5 px-4 text-emerald-100 print:hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="grid size-8 place-items-center rounded-full bg-emerald-500 text-emerald-950 shrink-0">
+                  <CheckCircle2 className="size-5" aria-hidden="true" />
+                </div>
+                <div className="text-start">
+                  <p className="text-sm font-bold tracking-wide">
+                    {dineIn ? t.orderSentTitle : t.orderSentCounterTitle}
+                  </p>
+                  <p className="text-xs opacity-90">{t.orderSentSubtitle}</p>
+                </div>
+              </div>
+            ) : null}
+
             <p lang="en" className="font-display text-2xl font-semibold tracking-[0.18em]">
               FORNELLO
             </p>
@@ -96,6 +121,31 @@ export function WaiterTicket({ open, time, onBack, onFinish }: WaiterTicketProps
             </p>
             {!dineIn && activeName ? <p className="text-2xl font-semibold">{activeName}</p> : null}
             {!dineIn ? <p className="text-sm">{t.readyIn(low, high)}</p> : null}
+
+            {!dineIn ? (
+              <a
+                href={whatsappUrl(
+                  buildReceipt({
+                    lang,
+                    t,
+                    mode: 'takeaway',
+                    table: null,
+                    lines: activeLines,
+                    pacing: activePacing,
+                    customerName: activeName,
+                    customerPhone: '',
+                    note: activeNote,
+                    orderRef: activeRef,
+                  }),
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-flex items-center gap-2 rounded-full border border-background/40 px-4 py-2 text-xs font-semibold hover:bg-background/10 print:hidden"
+              >
+                <MessageCircle className="size-3.5" aria-hidden="true" />
+                <span>{t.sendWhatsApp}</span>
+              </a>
+            ) : null}
 
             {dineIn && activeTable ? (
               <div className="my-2 flex flex-col items-center gap-1 rounded-2xl bg-white p-3 shadow-md print:hidden">
@@ -180,11 +230,19 @@ export function WaiterTicket({ open, time, onBack, onFinish }: WaiterTicketProps
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={onBack}
+              className="h-12 flex-1 rounded-full bg-background font-medium text-foreground hover:opacity-90 transition-opacity"
+            >
+              {t.backToMenu}
+            </button>
+
             {!staffConfirmed ? (
               <button
                 type="button"
                 onClick={() => setStaffConfirmed(true)}
-                className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full border border-background/40 font-medium text-background hover:bg-background/10"
+                className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full border border-background/40 font-medium text-background hover:bg-background/10 transition-colors"
               >
                 <Check className="size-4" aria-hidden="true" />
                 {t.markReceived}
@@ -198,7 +256,7 @@ export function WaiterTicket({ open, time, onBack, onFinish }: WaiterTicketProps
                 clearActivePlacedOrder()
                 onFinish()
               }}
-              className="h-12 flex-1 rounded-full bg-background font-medium text-foreground hover:opacity-90"
+              className="h-12 flex-1 rounded-full border border-background/40 font-medium text-background hover:bg-background/10 transition-colors text-xs sm:text-sm"
             >
               {t.startNewOrder}
             </button>

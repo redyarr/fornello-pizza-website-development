@@ -1,5 +1,6 @@
 import { SITE, type Strings } from './i18n'
 import { getItem, MODIFIER_GROUPS, PREP_MINUTES, type Lang, type MenuItem } from './menu'
+import { generateTableSignature, verifyTableSignature } from './table-token'
 
 export type Mode = 'dine-in' | 'takeaway'
 export type Pacing = 'now' | 'together' | 'after'
@@ -18,14 +19,19 @@ export function padTable(table: number): string {
 export function parseOrderParams(sp: Record<string, string | string[] | undefined>): OrderParams {
   const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
   const tableNumber = Number.parseInt(first(sp.table) ?? '', 10)
-  const table = tableNumber >= 1 && tableNumber <= SITE.tableCount ? tableNumber : null
-  const mode: Mode = first(sp.mode) === 'dine-in' || (first(sp.mode) === undefined && table) ? 'dine-in' : 'takeaway'
+  const sig = first(sp.sig)
+  const isVerified = verifyTableSignature(tableNumber, sig)
+  const table = isVerified && tableNumber >= 1 && tableNumber <= SITE.tableCount ? tableNumber : null
+  const mode: Mode = first(sp.mode) === 'dine-in' && table ? 'dine-in' : 'takeaway'
   return { mode, table: mode === 'dine-in' ? table : null, lang: first(sp.lang) === 'ckb' ? 'ckb' : 'en' }
 }
 
 export function orderQuery({ mode, table, lang }: OrderParams): string {
   const params = new URLSearchParams({ mode })
-  if (mode === 'dine-in' && table) params.set('table', padTable(table))
+  if (mode === 'dine-in' && table) {
+    params.set('table', padTable(table))
+    params.set('sig', generateTableSignature(table))
+  }
   if (lang === 'ckb') params.set('lang', 'ckb')
   return `?${params.toString()}`
 }

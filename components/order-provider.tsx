@@ -6,6 +6,7 @@ import { STRINGS, type Strings } from '@/lib/i18n'
 import { getMergedMenu, type Lang, type MenuItem } from '@/lib/menu'
 import { cartTotal, orderQuery, type CartLine, type Mode, type OrderParams, type Pacing, type Selections } from '@/lib/order'
 import { playSuccessChime } from '@/lib/sound'
+import { generateTableSignature, verifyTableSignature } from '@/lib/table-token'
 
 export type PastOrder = {
   id: string
@@ -37,6 +38,8 @@ type OrderContextValue = {
   t: Strings
   mode: Mode
   table: number | null
+  isTableVerified: boolean
+  verifiedTable: number | null
   lines: CartLine[]
   pacing: Pacing
   customerName: string
@@ -79,6 +82,7 @@ const generateOrderRef = () => `F-${Math.floor(1000 + Math.random() * 9000)}`
 
 export function OrderProvider({ initial, children }: { initial: OrderParams; children: ReactNode }) {
   const [params, setParams] = useState<OrderParams>(initial)
+  const [verifiedTable, setVerifiedTable] = useState<number | null>(initial.table)
   const [lines, setLines] = useState<CartLine[]>([])
   const [pacing, setPacing] = useState<Pacing>('together')
   const [customerName, setCustomerName] = useState('')
@@ -93,6 +97,30 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
   const [isOffline, setIsOffline] = useState(false)
   const hasHydratedCartRef = useRef(false)
   const toastTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Sync and persist verified table session
+  useEffect(() => {
+    if (initial.table) {
+      setVerifiedTable(initial.table)
+      try {
+        sessionStorage.setItem(
+          'fornello_table_verified_v1',
+          JSON.stringify({ table: initial.table, sig: generateTableSignature(initial.table) }),
+        )
+      } catch {}
+    } else {
+      try {
+        const stored = sessionStorage.getItem('fornello_table_verified_v1')
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (parsed && typeof parsed.table === 'number' && verifyTableSignature(parsed.table, parsed.sig)) {
+            setVerifiedTable(parsed.table)
+            setParams((prev) => ({ ...prev, mode: 'dine-in', table: parsed.table }))
+          }
+        }
+      } catch {}
+    }
+  }, [initial.table])
 
   // Register PWA offline service worker
   useEffect(() => {
@@ -196,6 +224,11 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
 
   const update = (patch: Partial<OrderParams>) => {
     const next = { ...params, ...patch }
+    // Enforce verified table constraints
+    if (next.mode === 'dine-in' && (!verifiedTable || next.table !== verifiedTable)) {
+      next.mode = 'takeaway'
+      next.table = null
+    }
     setParams(next)
     window.history.replaceState(null, '', orderQuery(next))
   }
@@ -322,9 +355,13 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
     } catch {}
   }
 
+  const isTableVerified = verifiedTable !== null && params.table === verifiedTable && params.mode === 'dine-in'
+
   const value: OrderContextValue = {
     ...params,
     t: STRINGS[params.lang],
+    isTableVerified,
+    verifiedTable,
     lines,
     pacing,
     customerName,
@@ -336,8 +373,24 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
     pastOrders,
     editingLine,
     setLang: (lang) => update({ lang }),
-    setMode: (mode) => update({ mode }),
-    setTable: (table) => update({ table }),
+    setMode: (mode) => {
+      if (mode === 'dine-in' && !verifiedTable) {
+        showToast(STRINGS[params.lang].dineInQrOnly)
+        return
+      }
+      update({ mode, table: mode === 'dine-in' ? verifiedTable : null })
+    },
+    setTable: (table) => {
+      if (table === null) {
+        update({ table: null, mode: 'takeaway' })
+        return
+      }
+      if (table !== verifiedTable) {
+        showToast(STRINGS[params.lang].tableLockedNotice)
+        return
+      }
+      update({ table: verifiedTable, mode: 'dine-in' })
+    },
     addLine,
     updateLine,
     setQty,

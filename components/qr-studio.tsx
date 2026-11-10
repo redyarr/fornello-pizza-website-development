@@ -12,16 +12,18 @@ import { Tricolor } from './tricolor'
 
 type Target = 'takeaway' | number
 
+import { buildVerifiedTableUrl } from '@/lib/table-token'
+
 const TABLES = Array.from({ length: SITE.tableCount }, (_, i) => i + 1)
 const ALL_TARGETS: Target[] = [...TABLES, 'takeaway']
 const subscribeNoop = () => () => {}
 
 function targetUrl(base: string, target: Target, lang: Lang): string {
-  const query =
-    target === 'takeaway'
-      ? orderQuery({ mode: 'takeaway', table: null, lang })
-      : orderQuery({ mode: 'dine-in', table: target, lang })
-  return `${base.replace(/\/+$/, '')}/${query}`
+  if (target === 'takeaway') {
+    const query = orderQuery({ mode: 'takeaway', table: null, lang })
+    return `${base.replace(/\/+$/, '')}/${query}`
+  }
+  return buildVerifiedTableUrl(base, target, lang)
 }
 
 function QrCard({ url, target }: { url: string; target: Target }) {

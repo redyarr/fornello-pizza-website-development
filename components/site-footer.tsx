@@ -1,6 +1,6 @@
 'use client'
 
-import { Bell, MapPin, MessageCircle, Phone, QrCode } from 'lucide-react'
+import { Bell, MapPin, MessageCircle, Phone, QrCode, ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useRef } from 'react'
@@ -90,6 +90,10 @@ export function SiteFooter() {
             <Link href="/floor" className={`${linkClass} text-sm text-muted-foreground`}>
               <Bell className="size-4 shrink-0" aria-hidden="true" />
               {t.waiterFloor}
+            </Link>
+            <Link href="/admin" className={`${linkClass} text-sm text-muted-foreground`}>
+              <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />
+              {t.staffMenu}
             </Link>
           </div>
         </div>
