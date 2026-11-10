@@ -75,6 +75,7 @@ import {
 } from '@/lib/menu'
 import { formatIQD } from '@/lib/order'
 import { cn } from '@/lib/utils'
+import { QrStudio } from './qr-studio'
 import { Tricolor } from './tricolor'
 
 const IMAGE_PRESETS = [
@@ -96,7 +97,7 @@ export function MenuManager() {
   const [lockoutRemaining, setLockoutRemaining] = useState(0)
   const [authTab, setAuthTab] = useState<'passkey' | 'passphrase' | 'totp' | 'keyfile'>('passphrase')
   const [menuData, setMenuData] = useState<MenuStoreData>(() => getStoredMenuData())
-  const [studioTab, setStudioTab] = useState<'items' | 'modifiers' | 'categories'>('items')
+  const [studioTab, setStudioTab] = useState<'items' | 'modifiers' | 'categories' | 'qr'>('items')
   const [selectedCategory, setSelectedCategory] = useState<CategoryId | 'all'>('all')
   const [query, setQuery] = useState('')
   const [editingItem, setEditingItem] = useState<(MenuItem & { soldOut?: boolean; custom?: boolean }) | null>(null)
@@ -593,8 +594,12 @@ export function MenuManager() {
   // AUTHENTICATED STAFF STUDIO
   // -------------------------------------------------------------
   return (
-    <main lang={lang} dir={lang === 'ckb' ? 'rtl' : 'ltr'} className="mx-auto min-h-dvh max-w-5xl px-4 py-8 pb-32">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <main
+      lang={lang}
+      dir={lang === 'ckb' ? 'rtl' : 'ltr'}
+      className="mx-auto min-h-dvh max-w-5xl px-4 py-8 pb-32 print:max-w-none print:p-0"
+    >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <div>
           <Link href="/" className="flex w-fit items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
@@ -603,7 +608,7 @@ export function MenuManager() {
           <div className="mt-2 flex items-center gap-3">
             <h1 className="font-display text-3xl font-semibold tracking-wide uppercase sm:text-4xl">{t.adminTitle}</h1>
             <span className="rounded-full bg-primary/20 px-3 py-1 text-xs font-semibold text-primary">
-              Frontend Only · Zero Backend
+              Live Sync Studio
             </span>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">{t.adminSubtitle}</p>
@@ -617,6 +622,19 @@ export function MenuManager() {
             <Bell className="size-3.5" aria-hidden="true" />
             <span>{t.waiterFloor}</span>
           </Link>
+          <button
+            type="button"
+            onClick={() => setStudioTab('qr')}
+            className={cn(
+              'flex h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-colors',
+              studioTab === 'qr'
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-primary/60 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground',
+            )}
+          >
+            <QrCode className="size-3.5" aria-hidden="true" />
+            <span>{t.staffQr}</span>
+          </button>
           <button
             type="button"
             onClick={() => setIsSecurityOpen(true)}
@@ -643,14 +661,14 @@ export function MenuManager() {
       </div>
 
       {syncNotice ? (
-        <div className="mt-4 flex items-center gap-2 rounded-xl bg-emerald-500/20 border border-emerald-500/40 px-4 py-2.5 text-sm font-medium text-emerald-300">
+        <div className="mt-4 flex items-center gap-2 rounded-xl bg-emerald-500/20 border border-emerald-500/40 px-4 py-2.5 text-sm font-medium text-emerald-300 print:hidden">
           <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
           {syncNotice}
         </div>
       ) : null}
 
       {/* Main Studio Action Bar */}
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-y border-border py-4">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-y border-border py-4 print:hidden">
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -696,7 +714,7 @@ export function MenuManager() {
       </div>
 
       {/* Studio Section Switcher Tabs */}
-      <div className="mt-6 flex flex-col gap-1.5 rounded-2xl border border-border bg-card/70 p-1.5 sm:flex-row sm:items-center sm:gap-2">
+      <div className="mt-6 flex flex-col gap-1.5 rounded-2xl border border-border bg-card/70 p-1.5 sm:flex-row sm:items-center sm:gap-2 print:hidden">
         <button
           type="button"
           onClick={() => setStudioTab('items')}
@@ -734,6 +752,19 @@ export function MenuManager() {
           )}
         >
           <span>{t.adminTabCategories}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setStudioTab('qr')}
+          className={cn(
+            'flex h-10 flex-1 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-colors',
+            studioTab === 'qr'
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-foreground/75 hover:bg-foreground/10 hover:text-foreground',
+          )}
+        >
+          <QrCode className="size-4 shrink-0" aria-hidden="true" />
+          <span>{t.staffQr}</span>
         </button>
       </div>
 
@@ -898,6 +929,8 @@ export function MenuManager() {
           }}
         />
       ) : null}
+
+      {studioTab === 'qr' ? <QrStudio embedded /> : null}
 
       {/* Add Custom Item Modal */}
       {isAddOpen ? (
