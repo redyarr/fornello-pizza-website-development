@@ -37,11 +37,12 @@
 │   └── waiter-ticket.tsx       # High-contrast card with order ref, waiter call & thermal print
 ├── lib/                        # Pure business logic, types, data schemas, i18n
 │   ├── auth.ts                 # Hardware Passkeys, RFC 6238 TOTP, 256-bit Keycard, PBKDF2 (100k)
-│   ├── floor.ts                # Real-time table mesh state, calls, bills & portable QR encoder
+│   ├── floor.ts                # Real-time table mesh state, calls, bills & 90m/30m auto-expiry
 │   ├── i18n.ts                 # Bilingual dictionaries (en, ckb) & shop constants (SITE)
-│   ├── menu.ts                 # Menu item catalogue, modifier groups, add-on pricing, overrides
+│   ├── menu.ts                 # Menu catalogue, dynamic modifier groups/sauces/toppings & category overrides
 │   ├── order.ts                # Calculation algorithms, receipt formatting, URL query serialization
 │   ├── sound.ts                # Client-side Web Audio bell chime & success sound synthesis
+│   ├── table-token.ts          # Cryptographic SHA-256 table QR signature generator & verifier
 │   └── utils.ts                # Utility cn() combining clsx and tailwind-merge
 └── public/                     # Static media assets (optimized PNGs/SVGs)
 ```
