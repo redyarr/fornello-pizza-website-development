@@ -118,3 +118,4 @@ export function buildVerifiedTableUrl(origin: string, table: number, lang: 'en' 
   const base = origin.replace(/\/+$/, '')
   return `${base}/?mode=dine-in&table=${pad}&sig=${sig}&lang=${lang}`
 }
+
