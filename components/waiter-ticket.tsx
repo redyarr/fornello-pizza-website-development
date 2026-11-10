@@ -3,7 +3,7 @@
 import { ArrowLeft, Bell, Check, CheckCircle2, Printer, QrCode } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useState } from 'react'
-import { encodeTableSyncPayload } from '@/lib/floor'
+import { dispatchTableCall, encodeTableSyncPayload } from '@/lib/floor'
 import { getItem } from '@/lib/menu'
 import { cartTotal, describeSelections, formatIQD, lineTotal, needsPacing, padTable, prepEstimate } from '@/lib/order'
 import { playBellChime } from '@/lib/sound'
@@ -14,16 +14,42 @@ import { Tricolor } from './tricolor'
 type WaiterTicketProps = { open: boolean; time: string; onBack: () => void; onFinish: () => void }
 
 export function WaiterTicket({ open, time, onBack, onFinish }: WaiterTicketProps) {
-  const { lang, t, mode, table, lines, pacing, customerName, note, orderRef, clearOrder } = useOrder()
+  const {
+    lang,
+    t,
+    mode,
+    table,
+    lines,
+    pacing,
+    customerName,
+    note,
+    orderRef,
+    clearOrder,
+    activePlacedOrder,
+    clearActivePlacedOrder,
+  } = useOrder()
   const [waiterCalled, setWaiterCalled] = useState(false)
   const [staffConfirmed, setStaffConfirmed] = useState(false)
-  const dineIn = mode === 'dine-in'
-  const [low, high] = prepEstimate(lines)
-  const name = customerName.trim()
+
+  const activeLines = activePlacedOrder?.lines && activePlacedOrder.lines.length > 0 ? activePlacedOrder.lines : lines
+  const activeMode = activePlacedOrder?.mode ?? mode
+  const activeTable = activePlacedOrder?.table ?? table
+  const activePacing = activePlacedOrder?.pacing ?? pacing
+  const activeName = (activePlacedOrder?.customerName ?? customerName).trim()
+  const activeNote = (activePlacedOrder?.note ?? note).trim()
+  const activeRef = activePlacedOrder?.orderRef ?? orderRef
+  const activeTime = activePlacedOrder?.timestamp ?? time
+
+  const dineIn = activeMode === 'dine-in'
+  const [low, high] = prepEstimate(activeLines)
 
   const handleCallWaiter = () => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate([40, 60, 40])
+    }
+    if (activeTable) {
+      dispatchTableCall(activeTable, 'waiter')
+      playBellChime()
     }
     setWaiterCalled(true)
     setTimeout(() => setWaiterCalled(false), 8000)
@@ -52,9 +78,9 @@ export function WaiterTicket({ open, time, onBack, onFinish }: WaiterTicketProps
               <span className="hidden sm:inline">{t.printThermalTicket}</span>
             </button>
             <span className="rounded-full border border-background/30 px-2.5 py-0.5 text-xs font-mono font-semibold tracking-wider">
-              {orderRef}
+              {activeRef}
             </span>
-            <p className="text-sm tabular-nums">{time}</p>
+            <p className="text-sm tabular-nums">{activeTime}</p>
           </div>
         </div>
 
@@ -66,24 +92,24 @@ export function WaiterTicket({ open, time, onBack, onFinish }: WaiterTicketProps
             <Tricolor className="[&>span:nth-child(2)]:bg-background/20" />
             <p className="text-sm">{dineIn ? t.ticketHintWaiter : t.ticketHintCounter}</p>
             <p className="font-display text-4xl sm:text-5xl md:text-6xl leading-tight font-semibold tracking-wide uppercase break-words">
-              {dineIn ? `${t.table} ${table ? padTable(table) : ''}` : t.takeaway}
+              {dineIn ? `${t.table} ${activeTable ? padTable(activeTable) : ''}` : t.takeaway}
             </p>
-            {!dineIn && name ? <p className="text-2xl font-semibold">{name}</p> : null}
+            {!dineIn && activeName ? <p className="text-2xl font-semibold">{activeName}</p> : null}
             {!dineIn ? <p className="text-sm">{t.readyIn(low, high)}</p> : null}
 
-            {dineIn && table ? (
+            {dineIn && activeTable ? (
               <div className="my-2 flex flex-col items-center gap-1 rounded-2xl bg-white p-3 shadow-md print:hidden">
                 <QRCodeSVG
-                  value={encodeTableSyncPayload(table, orderRef, lines, cartTotal(lines))}
+                  value={encodeTableSyncPayload(activeTable, activeRef, activeLines, cartTotal(activeLines))}
                   size={120}
                   level="M"
                 />
                 <span className="font-mono text-[10px] text-zinc-700">Scan for live floor monitor</span>
               </div>
             ) : null}
-            {dineIn && needsPacing(lines) ? (
+            {dineIn && needsPacing(activeLines) ? (
               <p className="rounded-full bg-background px-4 py-1.5 text-sm font-medium text-foreground">
-                {`${t.coffeeService}: ${t.pacing[pacing]}`}
+                {`${t.coffeeService}: ${t.pacing[activePacing]}`}
               </p>
             ) : null}
 
@@ -96,7 +122,7 @@ export function WaiterTicket({ open, time, onBack, onFinish }: WaiterTicketProps
           </div>
 
           <ul className="divide-y divide-dashed divide-background/40">
-            {lines.map((line) => {
+            {activeLines.map((line) => {
               const item = getItem(line.itemId)
               if (!item) return null
               return (
@@ -125,10 +151,10 @@ export function WaiterTicket({ open, time, onBack, onFinish }: WaiterTicketProps
             })}
           </ul>
 
-          {note.trim() ? (
+          {activeNote.trim() ? (
             <p className="mt-4 rounded-xl border-2 border-background/40 px-4 py-3 leading-relaxed">
               <span className="font-semibold">{`${t.note}: `}</span>
-              {note.trim()}
+              {activeNote.trim()}
             </p>
           ) : null}
 
@@ -150,7 +176,7 @@ export function WaiterTicket({ open, time, onBack, onFinish }: WaiterTicketProps
         <div className="flex flex-col gap-3 border-t-2 border-background px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
           <div className="flex items-baseline justify-between">
             <span className="font-display text-xl tracking-wide uppercase">{t.total}</span>
-            <span className="text-3xl font-semibold tabular-nums">{formatIQD(cartTotal(lines))}</span>
+            <span className="text-3xl font-semibold tabular-nums">{formatIQD(cartTotal(activeLines))}</span>
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -169,6 +195,7 @@ export function WaiterTicket({ open, time, onBack, onFinish }: WaiterTicketProps
               type="button"
               onClick={() => {
                 clearOrder()
+                clearActivePlacedOrder()
                 onFinish()
               }}
               className="h-12 flex-1 rounded-full bg-background font-medium text-foreground hover:opacity-90"

@@ -5,6 +5,7 @@ import { bindTableOrder } from '@/lib/floor'
 import { STRINGS, type Strings } from '@/lib/i18n'
 import { getMergedMenu, type Lang, type MenuItem } from '@/lib/menu'
 import { cartTotal, orderQuery, type CartLine, type Mode, type OrderParams, type Pacing, type Selections } from '@/lib/order'
+import { playSuccessChime } from '@/lib/sound'
 
 export type PastOrder = {
   id: string
@@ -14,6 +15,21 @@ export type PastOrder = {
   table: number | null
   lines: CartLine[]
   total: number
+}
+
+export type PlacedOrder = {
+  id: string
+  orderRef: string
+  mode: Mode
+  table: number | null
+  lines: CartLine[]
+  total: number
+  pacing: Pacing
+  customerName: string
+  customerPhone: string
+  note: string
+  timestamp: string
+  createdAt: number
 }
 
 type OrderContextValue = {
@@ -27,6 +43,7 @@ type OrderContextValue = {
   customerPhone: string
   note: string
   orderRef: string
+  activePlacedOrder: PlacedOrder | null
   menu: (MenuItem & { soldOut?: boolean; custom?: boolean })[]
   pastOrders: PastOrder[]
   editingLine: CartLine | null
@@ -38,6 +55,8 @@ type OrderContextValue = {
   setQty: (uid: string, qty: number) => void
   clearOrder: () => void
   clearOrderHistory: () => void
+  placeOrder: () => PlacedOrder | null
+  clearActivePlacedOrder: () => void
   setPacing: (pacing: Pacing) => void
   setCustomerName: (name: string) => void
   setCustomerPhone: (phone: string) => void
@@ -68,10 +87,32 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
   const [orderRef, setOrderRef] = useState(generateOrderRef)
   const [menu, setMenu] = useState(() => getMergedMenu())
   const [pastOrders, setPastOrders] = useState<PastOrder[]>([])
+  const [activePlacedOrder, setActivePlacedOrder] = useState<PlacedOrder | null>(null)
   const [editingLine, setEditingLine] = useState<CartLine | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [isOffline, setIsOffline] = useState(false)
   const hasHydratedCartRef = useRef(false)
   const toastTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Register PWA offline service worker
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {})
+    }
+  }, [])
+
+  // Track online/offline status
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const updateOnline = () => setIsOffline(!navigator.onLine)
+    window.addEventListener('online', updateOnline)
+    window.addEventListener('offline', updateOnline)
+    updateOnline()
+    return () => {
+      window.removeEventListener('online', updateOnline)
+      window.removeEventListener('offline', updateOnline)
+    }
+  }, [])
 
   const showToast = (msg: string) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
@@ -88,6 +129,24 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
       if (savedHistory) {
         const parsed = JSON.parse(savedHistory)
         if (Array.isArray(parsed)) setPastOrders(parsed)
+      }
+    } catch {}
+  }, [])
+
+  // Load active placed order from localStorage safely after mount
+  useEffect(() => {
+    try {
+      const savedPlaced = localStorage.getItem('fornello_placed_order_v1')
+      if (savedPlaced) {
+        const parsed = JSON.parse(savedPlaced) as PlacedOrder
+        if (parsed && typeof parsed === 'object') {
+          // Keep active for 4 hours
+          if (Date.now() - (parsed.createdAt || 0) < 14400000) {
+            setActivePlacedOrder(parsed)
+          } else {
+            localStorage.removeItem('fornello_placed_order_v1')
+          }
+        }
       }
     } catch {}
   }, [])
@@ -218,6 +277,51 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
     showToast(STRINGS[params.lang].reorderedToast)
   }
 
+  const placeOrder = (): PlacedOrder | null => {
+    if (lines.length === 0) return null
+    const orderTotal = cartTotal(lines)
+    const newRecord: PlacedOrder = {
+      id: crypto.randomUUID(),
+      orderRef,
+      mode: params.mode,
+      table: params.table,
+      lines: [...lines],
+      total: orderTotal,
+      pacing,
+      customerName,
+      customerPhone,
+      note,
+      timestamp: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+      createdAt: Date.now(),
+    }
+
+    if (params.mode === 'dine-in' && params.table) {
+      bindTableOrder(params.table, orderRef, lines, orderTotal)
+    }
+
+    const updated = [newRecord, ...pastOrders.slice(0, 9)]
+    setPastOrders(updated)
+    try {
+      localStorage.setItem('fornello_order_history_v1', JSON.stringify(updated))
+      localStorage.setItem('fornello_placed_order_v1', JSON.stringify(newRecord))
+      localStorage.removeItem('fornello_cart_v1')
+    } catch {}
+
+    setActivePlacedOrder(newRecord)
+    setLines([])
+    setOrderRef(generateOrderRef())
+    playSuccessChime()
+    showToast(STRINGS[params.lang].orderPlacedNotice)
+    return newRecord
+  }
+
+  const clearActivePlacedOrder = () => {
+    setActivePlacedOrder(null)
+    try {
+      localStorage.removeItem('fornello_placed_order_v1')
+    } catch {}
+  }
+
   const value: OrderContextValue = {
     ...params,
     t: STRINGS[params.lang],
@@ -227,6 +331,7 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
     customerPhone,
     note,
     orderRef,
+    activePlacedOrder,
     menu,
     pastOrders,
     editingLine,
@@ -238,6 +343,8 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
     setQty,
     clearOrder,
     clearOrderHistory,
+    placeOrder,
+    clearActivePlacedOrder,
     setPacing,
     setCustomerName,
     setCustomerPhone,
@@ -259,6 +366,16 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
             className="fixed top-16 start-1/2 z-50 -translate-x-1/2 rounded-full border border-primary/40 bg-card/95 px-5 py-2.5 text-center text-sm font-medium text-foreground shadow-2xl backdrop-blur animate-in fade-in-0 slide-in-from-top-4 duration-200"
           >
             {toast}
+          </aside>
+        ) : null}
+        {isOffline ? (
+          <aside
+            role="status"
+            aria-live="polite"
+            className="fixed bottom-20 start-1/2 z-40 -translate-x-1/2 flex items-center gap-2 rounded-full border border-amber-600/40 bg-amber-500/90 text-amber-950 px-4 py-1.5 text-xs font-semibold shadow-lg backdrop-blur"
+          >
+            <span className="size-2 rounded-full bg-amber-950 animate-pulse" />
+            <span>{params.lang === 'ckb' ? 'دۆخی ئۆفلاین · مینیو و داواکاری بەردەستە' : 'Offline Mode · Menu & Ordering Active'}</span>
           </aside>
         ) : null}
       </div>

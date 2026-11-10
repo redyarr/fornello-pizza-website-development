@@ -15,14 +15,19 @@ import {
 } from '@/lib/order'
 import { cn } from '@/lib/utils'
 import { ModeSwitcher } from './mode-switcher'
-import { useOrder } from './order-provider'
+import { useOrder, type PlacedOrder } from './order-provider'
 import { Sheet } from './sheet'
 
 const PACING_OPTIONS: Pacing[] = ['now', 'together', 'after']
 
-type OrderSheetProps = { open: boolean; onClose: () => void; onShowTicket: () => void }
+type OrderSheetProps = {
+  open: boolean
+  onClose: () => void
+  onShowTicket: () => void
+  onOrderPlaced?: (placed: PlacedOrder) => void
+}
 
-export function OrderSheet({ open, onClose, onShowTicket }: OrderSheetProps) {
+export function OrderSheet({ open, onClose, onShowTicket, onOrderPlaced }: OrderSheetProps) {
   const order = useOrder()
   const { lang, t, mode, table, lines, pacing, customerName, customerPhone, note, orderRef } = order
   const ready = lines.length > 0 && (mode === 'takeaway' || table !== null)
@@ -277,7 +282,10 @@ export function OrderSheet({ open, onClose, onShowTicket }: OrderSheetProps) {
                 if (typeof navigator !== 'undefined' && navigator.vibrate) {
                   navigator.vibrate([25, 40, 25])
                 }
-                order.saveCompletedOrder()
+                const placed = order.placeOrder()
+                if (placed && onOrderPlaced) {
+                  onOrderPlaced(placed)
+                }
               }}
               className={cn(actionClass, 'bg-accent text-accent-foreground')}
             >
@@ -297,12 +305,16 @@ export function OrderSheet({ open, onClose, onShowTicket }: OrderSheetProps) {
               if (typeof navigator !== 'undefined' && navigator.vibrate) {
                 navigator.vibrate([30, 50, 30])
               }
-              order.saveCompletedOrder()
-              onShowTicket()
+              const placed = order.placeOrder()
+              if (placed && onOrderPlaced) {
+                onOrderPlaced(placed)
+              } else {
+                onShowTicket()
+              }
             }}
             className={cn(actionClass, 'bg-primary text-primary-foreground disabled:opacity-50')}
           >
-            {mode === 'dine-in' ? t.showToWaiter : t.showAtCounter}
+            {mode === 'dine-in' ? t.sendOrderToWaiter : t.sendOrderToCounter}
           </button>
         </div>
       </div>

@@ -241,3 +241,4 @@ export function decodeTableSyncPayload(raw: string): PortableTablePayload | null
     return null
   }
 }
+
