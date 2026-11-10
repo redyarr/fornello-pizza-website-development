@@ -30,6 +30,7 @@ export function WaiterTicket({ open, time, onBack, onFinish }: WaiterTicketProps
     t,
     mode,
     table,
+    deviceId,
     lines,
     pacing,
     customerName,
@@ -59,7 +60,7 @@ export function WaiterTicket({ open, time, onBack, onFinish }: WaiterTicketProps
       navigator.vibrate([40, 60, 40])
     }
     if (activeTable) {
-      dispatchTableCall(activeTable, 'waiter')
+      dispatchTableCall(activeTable, 'waiter', deviceId)
       playBellChime()
     }
     setWaiterCalled(true)

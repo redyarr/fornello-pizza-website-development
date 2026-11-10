@@ -20,7 +20,7 @@ export function ServiceRequestSheet({
   open: boolean
   onClose: () => void
 }) {
-  const { t, table } = useOrder()
+  const { t, table, deviceId } = useOrder()
   const [activeRequest, setActiveRequest] = useState<ServiceType | null>(null)
   const [elapsed, setElapsed] = useState(0)
 
@@ -42,7 +42,7 @@ export function ServiceRequestSheet({
       navigator.vibrate([40, 70, 40])
     }
     if (table) {
-      dispatchTableCall(table, type)
+      dispatchTableCall(table, type, deviceId)
     }
     setActiveRequest(type)
   }
