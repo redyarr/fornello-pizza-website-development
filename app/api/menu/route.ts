@@ -1,9 +1,12 @@
 import { promises as fs } from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import type { MenuStoreData } from '@/lib/menu'
 import publishedDefault from '@/lib/menu-published.json'
 
+const PUBLISHED_JSON_PATH = path.join(process.cwd(), 'lib', 'menu-published.json')
 const LIVE_MENU_JSON_PATH = path.join(process.cwd(), '.fornello-menu-live.json')
+const TMP_MENU_JSON_PATH = path.join(os.tmpdir(), 'fornello-menu-live-v1.json')
 
 let memoryMenuStore: MenuStoreData = {
   customItems: Array.isArray((publishedDefault as MenuStoreData).customItems)
@@ -19,20 +22,25 @@ let memoryMenuStore: MenuStoreData = {
 }
 
 async function readMenuStore(): Promise<MenuStoreData> {
-  try {
-    const raw = await fs.readFile(LIVE_MENU_JSON_PATH, 'utf-8')
-    const parsed = JSON.parse(raw) as MenuStoreData
-    if (parsed && typeof parsed === 'object') {
-      memoryMenuStore = {
-        customItems: Array.isArray(parsed.customItems) ? parsed.customItems : [],
-        overrides: typeof parsed.overrides === 'object' && parsed.overrides ? parsed.overrides : {},
-        modifierGroups: parsed.modifierGroups,
-        categoryOverrides: parsed.categoryOverrides,
-        updatedAt: typeof parsed.updatedAt === 'number' ? parsed.updatedAt : Date.now(),
+  for (const candidatePath of [TMP_MENU_JSON_PATH, LIVE_MENU_JSON_PATH, PUBLISHED_JSON_PATH]) {
+    try {
+      const raw = await fs.readFile(candidatePath, 'utf-8')
+      const parsed = JSON.parse(raw) as MenuStoreData
+      if (parsed && typeof parsed === 'object') {
+        const parsedTime = typeof parsed.updatedAt === 'number' ? parsed.updatedAt : 0
+        if (parsedTime >= (memoryMenuStore.updatedAt ?? 0)) {
+          memoryMenuStore = {
+            customItems: Array.isArray(parsed.customItems) ? parsed.customItems : [],
+            overrides: typeof parsed.overrides === 'object' && parsed.overrides ? parsed.overrides : {},
+            modifierGroups: parsed.modifierGroups,
+            categoryOverrides: parsed.categoryOverrides,
+            updatedAt: parsedTime || Date.now(),
+          }
+        }
       }
+    } catch {
+      // Ignore missing candidate file
     }
-  } catch {
-    // Fallback to memoryMenuStore / publishedDefault when .fornello-menu-live.json doesn't exist yet
   }
   return memoryMenuStore
 }
@@ -58,11 +66,16 @@ export async function POST(request: Request) {
       updatedAt: typeof body.updatedAt === 'number' && body.updatedAt > 0 ? body.updatedAt : Date.now(),
     }
     memoryMenuStore = sanitized
+    const payload = `${JSON.stringify(sanitized, null, 2)}\n`
     try {
-      await fs.writeFile(LIVE_MENU_JSON_PATH, `${JSON.stringify(sanitized, null, 2)}\n`, 'utf-8')
-    } catch {
-      // Ignore write error on read-only serverless edge; memoryMenuStore stays updated for warm instance
-    }
+      await fs.writeFile(TMP_MENU_JSON_PATH, payload, 'utf-8')
+    } catch {}
+    try {
+      await fs.writeFile(LIVE_MENU_JSON_PATH, payload, 'utf-8')
+    } catch {}
+    try {
+      await fs.writeFile(PUBLISHED_JSON_PATH, payload, 'utf-8')
+    } catch {}
     return Response.json({ ok: true, data: sanitized })
   } catch {
     return Response.json({ error: 'Failed to process menu update' }, { status: 500 })
