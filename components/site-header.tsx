@@ -16,29 +16,29 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4">
-        <a href="#top" lang="en" className="flex flex-col gap-1" aria-label="Fornello Pizza">
+      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-2 px-3 sm:gap-3 sm:px-4">
+        <a href="#top" lang="en" className="flex shrink-0 flex-col gap-1" aria-label="Fornello Pizza">
           <span className="font-display text-xl leading-none font-semibold tracking-[0.18em] text-primary">
             FORNELLO
           </span>
           <Tricolor className="h-0.5 w-full" />
         </a>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={() => setModeOpen(true)}
             aria-label={`${t.orderType}: ${modeLabel}`}
-            className="flex h-9 items-center gap-2 rounded-full border border-border px-3 text-sm font-medium transition-colors hover:bg-foreground/10"
+            className="flex h-9 max-w-[140px] items-center gap-1.5 rounded-full border border-border px-2.5 text-xs font-medium transition-colors hover:bg-foreground/10 sm:max-w-none sm:gap-2 sm:px-3 sm:text-sm"
           >
-            <ModeIcon className="size-4 text-primary" aria-hidden="true" />
-            {modeLabel}
+            <ModeIcon className="size-4 shrink-0 text-primary" aria-hidden="true" />
+            <span className="truncate">{modeLabel}</span>
           </button>
           <button
             type="button"
             lang={lang === 'en' ? 'ckb' : 'en'}
             onClick={() => setLang(lang === 'en' ? 'ckb' : 'en')}
-            className="h-9 rounded-full border border-border px-3 text-sm font-medium transition-colors hover:bg-foreground/10"
+            className="h-9 shrink-0 rounded-full border border-border px-2.5 text-xs font-medium transition-colors hover:bg-foreground/10 sm:px-3 sm:text-sm"
           >
             {t.switchLanguage}
           </button>

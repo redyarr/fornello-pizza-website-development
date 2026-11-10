@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { STRINGS, type Strings } from '@/lib/i18n'
 import type { Lang, MenuItem } from '@/lib/menu'
 import { orderQuery, type CartLine, type Mode, type OrderParams, type Pacing, type Selections } from '@/lib/order'
@@ -39,6 +39,11 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
   const [pacing, setPacing] = useState<Pacing>('together')
   const [customerName, setCustomerName] = useState('')
   const [note, setNote] = useState('')
+
+  useEffect(() => {
+    document.documentElement.lang = params.lang
+    document.documentElement.dir = params.lang === 'ckb' ? 'rtl' : 'ltr'
+  }, [params.lang])
 
   const update = (patch: Partial<OrderParams>) => {
     const next = { ...params, ...patch }

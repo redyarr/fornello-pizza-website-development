@@ -37,7 +37,7 @@ export function WaiterTicket({ open, time, onBack, onFinish }: WaiterTicketProps
             </p>
             <Tricolor className="[&>span:nth-child(2)]:bg-background/20" />
             <p className="text-sm">{dineIn ? t.ticketHintWaiter : t.ticketHintCounter}</p>
-            <p className="font-display text-6xl leading-none font-semibold tracking-wide uppercase">
+            <p className="font-display text-4xl sm:text-5xl md:text-6xl leading-tight font-semibold tracking-wide uppercase break-words">
               {dineIn ? `${t.table} ${table ? padTable(table) : ''}` : t.takeaway}
             </p>
             {!dineIn && name ? <p className="text-2xl font-semibold">{name}</p> : null}
@@ -82,7 +82,7 @@ export function WaiterTicket({ open, time, onBack, onFinish }: WaiterTicketProps
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-3 border-t-2 border-background px-5 py-4">
+        <div className="flex flex-col gap-3 border-t-2 border-background px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
           <div className="flex items-baseline justify-between">
             <span className="font-display text-xl tracking-wide uppercase">{t.total}</span>
             <span className="text-3xl font-semibold tabular-nums">{formatIQD(cartTotal(lines))}</span>

@@ -69,7 +69,7 @@ function ItemForm({ item, onClose }: { item: MenuItem; onClose: () => void }) {
                 <span className="font-display text-lg tracking-wide uppercase">{group.label[lang]}</span>
                 <span className="text-xs text-muted-foreground">{hint}</span>
               </legend>
-              <div className={cn('grid gap-2', group.options.length > 3 ? 'grid-cols-2' : 'grid-cols-1')}>
+              <div className={cn('grid gap-2', group.options.length > 3 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1')}>
                 {group.options.map((option) => {
                   const checked = picked.includes(option.id)
                   return (
@@ -98,7 +98,7 @@ function ItemForm({ item, onClose }: { item: MenuItem; onClose: () => void }) {
         })}
       </div>
 
-      <div className="flex shrink-0 items-center gap-3 border-t border-border bg-card px-5 py-4">
+      <div className="flex shrink-0 items-center gap-3 border-t border-border bg-card px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div role="group" aria-label={t.quantity} className="flex h-12 items-center rounded-full border border-border">
           <button
             type="button"

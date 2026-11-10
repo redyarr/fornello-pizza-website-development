@@ -26,7 +26,7 @@ function targetUrl(base: string, target: Target, lang: Lang): string {
 
 function QrCard({ url, target }: { url: string; target: Target }) {
   return (
-    <div className="flex w-80 flex-col items-center gap-4 rounded-3xl bg-foreground px-8 py-9 text-center text-background [print-color-adjust:exact]">
+    <div className="flex w-full max-w-80 flex-col items-center gap-4 rounded-3xl bg-foreground px-6 py-8 text-center text-background sm:px-8 sm:py-9 [print-color-adjust:exact]">
       <p className="font-display text-4xl leading-none font-semibold tracking-[0.14em]">FORNELLO</p>
       <Tricolor className="[&>span:nth-child(2)]:bg-background/20" />
       <div className="rounded-2xl border-2 border-dashed border-background/50 p-4">

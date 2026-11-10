@@ -58,7 +58,8 @@ export function describeSelections(item: MenuItem, selections: Selections, lang:
       group.defaults?.length === picked.length && group.defaults.every((d) => picked.includes(d))
     if (isDefault && !group.alwaysShow) return []
     const labels = group.options.filter((o) => picked.includes(o.id)).map((o) => o.label[lang])
-    return [`${group.label[lang]}: ${labels.join(', ')}`]
+    const separator = lang === 'ckb' ? '، ' : ', '
+    return [`${group.label[lang]}: ${labels.join(separator)}`]
   })
 }
 
@@ -100,9 +101,11 @@ export type ReceiptInput = {
 }
 
 export function buildReceipt({ lang, t, mode, table, lines, pacing, customerName, note }: ReceiptInput): string {
-  const out: string[] = [`*${SITE.name} — ${t.newOrder}*`]
+  const siteTitle = lang === 'ckb' ? `${SITE.nameCkb} (${SITE.name})` : SITE.name
+  const out: string[] = [`*${siteTitle} — ${t.newOrder}*`]
   if (mode === 'dine-in') {
-    out.push(`${t.dineIn} · ${t.table} ${table ? padTable(table) : '?'}`)
+    const tableDisplay = table ? padTable(table) : lang === 'ckb' ? '؟' : '?'
+    out.push(`${t.dineIn} · ${t.table} ${tableDisplay}`)
     if (needsPacing(lines)) out.push(`${t.coffeeService}: ${t.pacing[pacing]}`)
   } else {
     const name = customerName.trim()

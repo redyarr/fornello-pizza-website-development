@@ -2,8 +2,8 @@
 
 import { Search, X } from 'lucide-react'
 import Image from 'next/image'
-import { useState } from 'react'
-import { CATEGORIES, MENU, type MenuItem, type Tag } from '@/lib/menu'
+import { useEffect, useRef, useState } from 'react'
+import { CATEGORIES, MENU, type CategoryId, type MenuItem, type Tag } from '@/lib/menu'
 import { cn } from '@/lib/utils'
 import { ItemSheet } from './item-sheet'
 import { MenuItemRow } from './menu-item-row'
@@ -17,6 +17,9 @@ export function MenuBrowser() {
   const [query, setQuery] = useState('')
   const [activeTag, setActiveTag] = useState<Tag | null>(null)
   const [selected, setSelected] = useState<MenuItem | null>(null)
+  const [activeCategory, setActiveCategory] = useState<CategoryId>('pizza')
+  const isManualScrollRef = useRef(false)
+  const navPillsRef = useRef<Record<string, HTMLAnchorElement | null>>({})
 
   const needle = query.trim().toLowerCase()
   const visible = MENU.filter((item) => {
@@ -29,6 +32,64 @@ export function MenuBrowser() {
     category,
     items: visible.filter((item) => item.category === category.id),
   })).filter((section) => section.items.length > 0)
+
+  // Keep active category synced if current one is filtered out
+  useEffect(() => {
+    if (sections.length > 0 && !sections.some((s) => s.category.id === activeCategory)) {
+      setActiveCategory(sections[0].category.id)
+    }
+  }, [sections, activeCategory])
+
+  // Center active category pill in sticky subnav on mobile
+  useEffect(() => {
+    const pill = navPillsRef.current[activeCategory]
+    if (pill) {
+      pill.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+    }
+  }, [activeCategory])
+
+  // Scroll-spy observer
+  useEffect(() => {
+    if (sections.length === 0) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (isManualScrollRef.current) return
+        const visibleEntries = entries.filter((e) => e.isIntersecting)
+        if (visibleEntries.length > 0) {
+          const topEntry = visibleEntries.reduce((prev, curr) =>
+            curr.intersectionRatio > prev.intersectionRatio ? curr : prev,
+          )
+          if (topEntry?.target.id) {
+            setActiveCategory(topEntry.target.id as CategoryId)
+          }
+        }
+      },
+      {
+        rootMargin: '-120px 0px -60% 0px',
+        threshold: [0.1, 0.3, 0.5, 0.8],
+      },
+    )
+
+    for (const section of sections) {
+      const el = document.getElementById(section.category.id)
+      if (el) observer.observe(el)
+    }
+
+    return () => observer.disconnect()
+  }, [sections])
+
+  const handleCategoryClick = (id: CategoryId) => {
+    isManualScrollRef.current = true
+    setActiveCategory(id)
+    const target = document.getElementById(id)
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth' })
+    }
+    setTimeout(() => {
+      isManualScrollRef.current = false
+    }, 800)
+  }
 
   return (
     <section id="menu" aria-label={t.menu} className="scroll-mt-14">
@@ -72,8 +133,20 @@ export function MenuBrowser() {
           {CATEGORIES.map((category) => (
             <li key={category.id} className="shrink-0">
               <a
+                ref={(el) => {
+                  navPillsRef.current[category.id] = el
+                }}
                 href={`#${category.id}`}
-                className="flex h-9 items-center rounded-full px-4 font-display text-base tracking-wide uppercase transition-colors hover:bg-foreground/10 hover:text-primary"
+                onClick={(e) => {
+                  e.preventDefault()
+                  handleCategoryClick(category.id)
+                }}
+                className={cn(
+                  'flex h-9 items-center rounded-full px-4 font-display text-base tracking-wide uppercase transition-colors',
+                  activeCategory === category.id
+                    ? 'bg-primary font-semibold text-primary-foreground shadow-sm'
+                    : 'text-foreground/80 hover:bg-foreground/10 hover:text-primary',
+                )}
               >
                 {t.categoryNames[category.id]}
               </a>

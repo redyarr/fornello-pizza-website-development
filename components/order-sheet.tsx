@@ -108,7 +108,7 @@ export function OrderSheet({ open, onClose, onShowTicket }: OrderSheetProps) {
         {mode === 'dine-in' && needsPacing(lines) ? (
           <fieldset className="flex flex-col gap-3">
             <legend className="font-display text-lg tracking-wide uppercase">{t.pacingTitle}</legend>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               {PACING_OPTIONS.map((option) => (
                 <label
                   key={option}
@@ -182,7 +182,7 @@ export function OrderSheet({ open, onClose, onShowTicket }: OrderSheetProps) {
         ) : null}
       </div>
 
-      <div className="flex shrink-0 flex-col gap-3 border-t border-border bg-card px-5 py-4">
+      <div className="flex shrink-0 flex-col gap-3 border-t border-border bg-card px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div className="flex items-baseline justify-between">
           <span className="font-display text-lg tracking-wide uppercase">{t.total}</span>
           <span className="text-xl font-semibold tabular-nums">{formatIQD(cartTotal(lines))}</span>
