@@ -1,3 +1,5 @@
+import publishedDefault from './menu-published.json'
+
 export type Lang = 'en' | 'ckb'
 export type Localized = Record<Lang, string>
 export type CategoryId = 'pizza' | 'taglio' | 'coffee' | 'potato'
@@ -554,14 +556,48 @@ export type MenuStoreData = {
 
 export const MENU_STORAGE_KEY = 'fornello_menu_store_v1'
 
+const DEFAULT_PUBLISHED_STORE: MenuStoreData = {
+  customItems: Array.isArray((publishedDefault as MenuStoreData).customItems)
+    ? (publishedDefault as MenuStoreData).customItems
+    : [],
+  overrides:
+    typeof (publishedDefault as MenuStoreData).overrides === 'object' && (publishedDefault as MenuStoreData).overrides
+      ? (publishedDefault as MenuStoreData).overrides
+      : {},
+  modifierGroups: (publishedDefault as MenuStoreData).modifierGroups,
+  categoryOverrides: (publishedDefault as MenuStoreData).categoryOverrides,
+}
+
 export function getStoredMenuData(): MenuStoreData {
-  if (typeof window === 'undefined') return { customItems: [], overrides: {} }
+  if (typeof window === 'undefined') return DEFAULT_PUBLISHED_STORE
   try {
     const raw = localStorage.getItem(MENU_STORAGE_KEY)
-    if (!raw) return { customItems: [], overrides: {} }
+    if (!raw) return DEFAULT_PUBLISHED_STORE
     return JSON.parse(raw) as MenuStoreData
   } catch {
-    return { customItems: [], overrides: {} }
+    return DEFAULT_PUBLISHED_STORE
+  }
+}
+
+export async function syncRemoteMenuData(): Promise<MenuStoreData | null> {
+  if (typeof window === 'undefined') return null
+  try {
+    const res = await fetch('/api/menu', { cache: 'no-store' })
+    if (!res.ok) return null
+    const remote = (await res.json()) as MenuStoreData
+    if (remote && typeof remote === 'object' && Array.isArray(remote.customItems)) {
+      const currentRaw = localStorage.getItem(MENU_STORAGE_KEY)
+      const nextRaw = JSON.stringify(remote)
+      if (currentRaw !== nextRaw) {
+        syncDynamicMenuGlobals(remote)
+        localStorage.setItem(MENU_STORAGE_KEY, nextRaw)
+        window.dispatchEvent(new Event('fornello_menu_updated'))
+      }
+      return remote
+    }
+    return null
+  } catch {
+    return null
   }
 }
 
@@ -618,6 +654,11 @@ export function saveStoredMenuData(data: MenuStoreData): void {
     syncDynamicMenuGlobals(data)
     localStorage.setItem(MENU_STORAGE_KEY, JSON.stringify(data))
     window.dispatchEvent(new Event('fornello_menu_updated'))
+    fetch('/api/menu', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).catch(() => {})
   } catch {
     // quota or privacy sandbox fallback
   }

@@ -44,13 +44,14 @@ import {
   decodeTableSyncPayload,
   ENABLE_WAITER_QR_SYNC,
   getInitialFloorState,
+  syncRemoteFloorState,
   updateTableStatus,
   type ActiveTableCall,
   type FloorState,
   type TableOrderRecord,
 } from '@/lib/floor'
 import { SITE, STRINGS } from '@/lib/i18n'
-import { getItem, type Lang } from '@/lib/menu'
+import { getItem, syncRemoteMenuData, type Lang } from '@/lib/menu'
 import { describeSelections, formatIQD, lineTotal, padTable } from '@/lib/order'
 import { playBellChime } from '@/lib/sound'
 import { cn } from '@/lib/utils'
@@ -114,11 +115,25 @@ export function WaiterFloor() {
     return () => clearInterval(timer)
   }, [])
 
-  // Live Floor Synchronization (BroadcastChannel + LocalStorage Events)
+  // Live Floor Synchronization (Cross-Phone API + BroadcastChannel + LocalStorage Events)
   useEffect(() => {
     const handleUpdate = () => {
       const fresh = getInitialFloorState()
       setFloorState(fresh)
+    }
+
+    handleUpdate()
+    void syncRemoteFloorState()
+    void syncRemoteMenuData()
+
+    const pollTimer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
+      void syncRemoteFloorState()
+    }, 2500)
+
+    const onFocus = () => {
+      void syncRemoteFloorState()
+      void syncRemoteMenuData()
     }
 
     let bc: BroadcastChannel | null = null
@@ -135,11 +150,14 @@ export function WaiterFloor() {
 
     window.addEventListener('fornello_floor_updated', handleUpdate)
     window.addEventListener('storage', handleUpdate)
+    window.addEventListener('focus', onFocus)
 
     return () => {
+      clearInterval(pollTimer)
       if (bc) bc.close()
       window.removeEventListener('fornello_floor_updated', handleUpdate)
       window.removeEventListener('storage', handleUpdate)
+      window.removeEventListener('focus', onFocus)
     }
   }, [])
 

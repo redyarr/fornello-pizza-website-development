@@ -1,7 +1,7 @@
 // Fornello Pizza - Zero-Backend PWA Offline Service Worker
 // Enables 100% offline menu browsing, ordering, and floor monitoring
 
-const CACHE_NAME = 'fornello-pwa-v1'
+const CACHE_NAME = 'fornello-pwa-v2'
 const PRECACHE_URLS = [
   '/',
   '/admin',
@@ -41,8 +41,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url)
 
-  // Skip non-GET or cross-origin requests
-  if (event.request.method !== 'GET' || url.origin !== self.location.origin) {
+  // Skip non-GET, cross-origin, or live API requests
+  if (
+    event.request.method !== 'GET' ||
+    url.origin !== self.location.origin ||
+    url.pathname.startsWith('/api/')
+  ) {
     return
   }
 

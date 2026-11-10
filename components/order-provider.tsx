@@ -1,9 +1,9 @@
 'use client'
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
-import { bindTableOrder, getInitialFloorState, getOrCreateDeviceId, rotateDeviceId } from '@/lib/floor'
+import { bindTableOrder, getInitialFloorState, getOrCreateDeviceId, rotateDeviceId, syncRemoteFloorState } from '@/lib/floor'
 import { STRINGS, type Strings } from '@/lib/i18n'
-import { getMergedMenu, type Lang, type MenuItem } from '@/lib/menu'
+import { getMergedMenu, syncRemoteMenuData, type Lang, type MenuItem } from '@/lib/menu'
 import { cartTotal, orderQuery, type CartLine, type Mode, type OrderParams, type Pacing, type Selections } from '@/lib/order'
 import { playSuccessChime } from '@/lib/sound'
 import { generateTableSignature, verifyTableSignature } from '@/lib/table-token'
@@ -201,15 +201,35 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
     } catch {}
   }, [deviceId, initial.table])
 
-  // Hydrate and listen for menu updates from staff admin studio or storage
+  // Hydrate and listen for menu updates from staff admin studio, storage, and live cross-device API
   useEffect(() => {
     const onMenuUpdate = () => setMenu(getMergedMenu())
     onMenuUpdate()
+    void syncRemoteMenuData()
+
+    const pollTimer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
+      void syncRemoteMenuData()
+      void syncRemoteFloorState()
+    }, 8000)
+
+    const onVisibilityOrFocus = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        void syncRemoteMenuData()
+        void syncRemoteFloorState()
+      }
+    }
+
     window.addEventListener('fornello_menu_updated', onMenuUpdate)
     window.addEventListener('storage', onMenuUpdate)
+    window.addEventListener('focus', onVisibilityOrFocus)
+    document.addEventListener('visibilitychange', onVisibilityOrFocus)
     return () => {
+      clearInterval(pollTimer)
       window.removeEventListener('fornello_menu_updated', onMenuUpdate)
       window.removeEventListener('storage', onMenuUpdate)
+      window.removeEventListener('focus', onVisibilityOrFocus)
+      document.removeEventListener('visibilitychange', onVisibilityOrFocus)
     }
   }, [])
 

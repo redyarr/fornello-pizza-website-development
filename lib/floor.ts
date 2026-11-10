@@ -141,6 +141,50 @@ export function saveFloorState(state: FloorState): void {
   }
 }
 
+function postFloorMutation(payload: Record<string, unknown>): void {
+  if (typeof window === 'undefined') return
+  fetch('/api/floor', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    cache: 'no-store',
+  })
+    .then(async (res) => {
+      if (!res.ok) return
+      const json = (await res.json()) as { ok?: boolean; state?: FloorState }
+      if (json?.state && typeof json.state === 'object') {
+        const currentRaw = localStorage.getItem(FLOOR_STORAGE_KEY)
+        const remoteRaw = JSON.stringify(json.state)
+        if (currentRaw !== remoteRaw) {
+          saveFloorState(json.state)
+        }
+      }
+    })
+    .catch(() => {
+      // Offline fallback: localStorage + BroadcastChannel remain active
+    })
+}
+
+export async function syncRemoteFloorState(): Promise<FloorState | null> {
+  if (typeof window === 'undefined') return null
+  try {
+    const res = await fetch('/api/floor', { cache: 'no-store' })
+    if (!res.ok) return null
+    const remote = (await res.json()) as FloorState
+    if (remote && typeof remote === 'object' && remote.tables && remote.activeCalls) {
+      const currentRaw = localStorage.getItem(FLOOR_STORAGE_KEY)
+      const remoteRaw = JSON.stringify(remote)
+      if (currentRaw !== remoteRaw) {
+        saveFloorState(remote)
+      }
+      return remote
+    }
+  } catch {
+    // Offline fallback
+  }
+  return null
+}
+
 // -------------------------------------------------------------
 // Live Service Call Dispatch & Handlers
 // -------------------------------------------------------------
@@ -171,6 +215,12 @@ export function dispatchTableCall(table: number, type: TableCallType, deviceId?:
   }
 
   saveFloorState(nextState)
+  postFloorMutation({
+    action: 'set_table',
+    table,
+    call,
+    ...(updatedTable ? { record: updatedTable } : {}),
+  })
 }
 
 export function acknowledgeTableCall(table: number): void {
@@ -193,6 +243,7 @@ export function acknowledgeTableCall(table: number): void {
   }
 
   saveFloorState(nextState)
+  postFloorMutation({ action: 'ack_call', table })
 }
 
 // -------------------------------------------------------------
@@ -266,6 +317,12 @@ export function bindTableOrder(
   }
 
   saveFloorState(nextState)
+  postFloorMutation({
+    action: 'set_table',
+    table,
+    record,
+    call: finalCall ?? null,
+  })
 }
 
 export function updateTableStatus(table: number, status: 'active' | 'served' | 'paid'): void {
@@ -279,15 +336,21 @@ export function updateTableStatus(table: number, status: 'active' | 'served' | '
     return
   }
 
+  const updatedRecord: TableOrderRecord = { ...existing, status }
   const nextState: FloorState = {
     ...current,
     tables: {
       ...current.tables,
-      [table]: { ...existing, status },
+      [table]: updatedRecord,
     },
   }
 
   saveFloorState(nextState)
+  postFloorMutation({
+    action: 'set_table',
+    table,
+    record: updatedRecord,
+  })
 }
 
 export function clearTable(table: number): void {
@@ -299,10 +362,12 @@ export function clearTable(table: number): void {
   delete nextCalls[table]
 
   saveFloorState({ tables: nextTables, activeCalls: nextCalls })
+  postFloorMutation({ action: 'clear_table', table })
 }
 
 export function resetAllFloor(): void {
   saveFloorState({ tables: {}, activeCalls: {} })
+  postFloorMutation({ action: 'reset_all' })
 }
 
 // -------------------------------------------------------------

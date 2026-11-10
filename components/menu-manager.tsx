@@ -63,6 +63,7 @@ import {
   getStoredMenuData,
   MODIFIER_GROUPS,
   saveStoredMenuData,
+  syncRemoteMenuData,
   type CategoryId,
   type CustomMenuItem,
   type Lang,
@@ -113,6 +114,11 @@ export function MenuManager() {
     if (isSessionAuthorized()) {
       setAuthed(true)
     }
+    void syncRemoteMenuData().then((remote) => {
+      if (remote) {
+        setMenuData(remote)
+      }
+    })
   }, [])
 
   // Auto-select best auth tab on mount
