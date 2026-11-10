@@ -2,13 +2,33 @@
 
 import { MapPin, MessageCircle, Phone, QrCode } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useRef } from 'react'
 import { SITE } from '@/lib/i18n'
 import { useOrder } from './order-provider'
 import { Tricolor } from './tricolor'
 
 export function SiteFooter() {
   const { t } = useOrder()
+  const router = useRouter()
+  const clickCountRef = useRef(0)
+  const clickTimerRef = useRef<NodeJS.Timeout | null>(null)
   const linkClass = 'flex items-center gap-3 underline-offset-4 hover:text-primary hover:underline'
+
+  const handleSecretStaffClick = () => {
+    clickCountRef.current += 1
+    if (clickTimerRef.current) clearTimeout(clickTimerRef.current)
+
+    if (clickCountRef.current >= 5) {
+      clickCountRef.current = 0
+      router.push('/admin')
+      return
+    }
+
+    clickTimerRef.current = setTimeout(() => {
+      clickCountRef.current = 0
+    }, 2500)
+  }
 
   return (
     <footer className="border-t border-border pb-28">
@@ -17,7 +37,14 @@ export function SiteFooter() {
           <p lang="en" className="font-display text-3xl font-semibold tracking-[0.14em] text-primary">
             FORNELLO
           </p>
-          <Tricolor />
+          <button
+            type="button"
+            onClick={handleSecretStaffClick}
+            aria-label="Fornello insignia"
+            className="w-fit cursor-default outline-none select-none active:scale-95 transition-transform"
+          >
+            <Tricolor />
+          </button>
           <p lang="ckb" className="text-muted-foreground">
             {SITE.nameCkb}
           </p>
@@ -25,10 +52,15 @@ export function SiteFooter() {
 
         <div className="flex flex-col gap-4">
           <h2 className="font-display text-lg tracking-wide uppercase">{t.findUs}</h2>
-          <p className="flex items-start gap-3 leading-relaxed">
+          <a
+            href={SITE.mapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`${linkClass} leading-relaxed`}
+          >
             <MapPin className="mt-1 size-4 shrink-0 text-primary" aria-hidden="true" />
-            {t.address}
-          </p>
+            <span>{t.address}</span>
+          </a>
           <a href={SITE.phoneHref} className={linkClass}>
             <Phone className="size-4 shrink-0 text-primary" aria-hidden="true" />
             <span className="sr-only">{t.call}</span>
@@ -50,10 +82,12 @@ export function SiteFooter() {
             <span className="sr-only">Instagram</span>
             <bdi dir="ltr">{SITE.instagramHandle.slice(1)}</bdi>
           </a>
-          <Link href="/qr" className={`${linkClass} mt-2 text-sm text-muted-foreground`}>
-            <QrCode className="size-4 shrink-0" aria-hidden="true" />
-            {t.staffQr}
-          </Link>
+          <div className="mt-2 flex border-t border-border/50 pt-3">
+            <Link href="/qr" className={`${linkClass} text-sm text-muted-foreground`}>
+              <QrCode className="size-4 shrink-0" aria-hidden="true" />
+              {t.staffQr}
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

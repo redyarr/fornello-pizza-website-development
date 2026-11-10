@@ -83,7 +83,19 @@
   }
   @media print {
     body {
-      background: white;
+      background: white !important;
+      color: black !important;
+    }
+    dialog[open] {
+      position: static !important;
+      inset: auto !important;
+      width: 100% !important;
+      max-width: 80mm !important;
+      margin: 0 auto !important;
+      background: white !important;
+      color: black !important;
+      box-shadow: none !important;
+      border: none !important;
     }
   }
 }

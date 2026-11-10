@@ -16,6 +16,7 @@ export function Hero() {
         alt=""
         fill
         priority
+        loading="eager"
         sizes="100vw"
         className="-z-20 object-cover object-[75%_50%] rtl:-scale-x-100"
       />

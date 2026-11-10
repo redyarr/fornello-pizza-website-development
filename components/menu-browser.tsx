@@ -13,7 +13,7 @@ import { Tricolor } from './tricolor'
 const FILTER_TAGS: Tag[] = ['signature', 'spicy', 'vegetarian', 'caffeine']
 
 export function MenuBrowser() {
-  const { lang, t } = useOrder()
+  const { lang, t, menu } = useOrder()
   const [query, setQuery] = useState('')
   const [activeTag, setActiveTag] = useState<Tag | null>(null)
   const [selected, setSelected] = useState<MenuItem | null>(null)
@@ -22,7 +22,7 @@ export function MenuBrowser() {
   const navPillsRef = useRef<Record<string, HTMLAnchorElement | null>>({})
 
   const needle = query.trim().toLowerCase()
-  const visible = MENU.filter((item) => {
+  const visible = menu.filter((item) => {
     if (activeTag && !item.tags.includes(activeTag)) return false
     if (!needle) return true
     const haystack = [item.name, item.description?.en, item.description?.ckb].join(' ').toLowerCase()
@@ -105,8 +105,18 @@ export function MenuBrowser() {
             onChange={(event) => setQuery(event.target.value)}
             placeholder={t.searchPlaceholder}
             aria-label={t.searchLabel}
-            className="h-12 w-full rounded-full border border-input bg-secondary ps-11 pe-4 text-base placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="h-12 w-full rounded-full border border-input bg-secondary ps-11 pe-11 text-base placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           />
+          {query ? (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              aria-label={t.clearFilters}
+              className="absolute end-3 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded-full text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
+            >
+              <X className="size-4" aria-hidden="true" />
+            </button>
+          ) : null}
         </div>
         <div role="group" aria-label={t.filters} className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
           {FILTER_TAGS.map((tag) => (

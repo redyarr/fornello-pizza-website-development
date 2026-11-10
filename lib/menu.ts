@@ -22,6 +22,7 @@ export type MenuItem = {
   price: number
   tags: Tag[]
   groups: string[]
+  image?: string
 }
 
 export type Category = {
@@ -494,6 +495,81 @@ export const MENU: MenuItem[] = [
 
 const MENU_BY_ID = new Map(MENU.map((item) => [item.id, item]))
 
-export function getItem(id: string): MenuItem | undefined {
+export type MenuItemOverride = {
+  name?: string
+  price?: number
+  description?: Localized
+  category?: CategoryId
+  tags?: Tag[]
+  image?: string
+  soldOut?: boolean
+  deleted?: boolean
+}
+
+export type CustomMenuItem = MenuItem & {
+  custom: true
+  soldOut?: boolean
+}
+
+export type MenuStoreData = {
+  customItems: CustomMenuItem[]
+  overrides: Record<string, MenuItemOverride>
+}
+
+export const MENU_STORAGE_KEY = 'fornello_menu_store_v1'
+
+export function getStoredMenuData(): MenuStoreData {
+  if (typeof window === 'undefined') return { customItems: [], overrides: {} }
+  try {
+    const raw = localStorage.getItem(MENU_STORAGE_KEY)
+    if (!raw) return { customItems: [], overrides: {} }
+    return JSON.parse(raw) as MenuStoreData
+  } catch {
+    return { customItems: [], overrides: {} }
+  }
+}
+
+export function saveStoredMenuData(data: MenuStoreData): void {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(MENU_STORAGE_KEY, JSON.stringify(data))
+    window.dispatchEvent(new Event('fornello_menu_updated'))
+  } catch {
+    // quota or privacy sandbox fallback
+  }
+}
+
+export function getMergedMenu(data?: MenuStoreData): (MenuItem & { soldOut?: boolean; custom?: boolean })[] {
+  const store = data ?? getStoredMenuData()
+  const baseMerged = MENU.filter((item) => !store.overrides[item.id]?.deleted).map((item) => {
+    const override = store.overrides[item.id]
+    if (!override) return item
+    const merged: MenuItem & { soldOut?: boolean; custom?: boolean } = {
+      ...item,
+      name: override.name ?? item.name,
+      price: override.price !== undefined ? override.price : item.price,
+      description: override.description ?? item.description,
+      category: override.category ?? item.category,
+      tags: override.tags ?? item.tags,
+      image: override.image ?? item.image,
+      soldOut: Boolean(override.soldOut),
+    }
+    MENU_BY_ID.set(merged.id, merged)
+    return merged
+  })
+  for (const custom of store.customItems) {
+    MENU_BY_ID.set(custom.id, custom)
+  }
+  return [...baseMerged, ...store.customItems]
+}
+
+export function getItem(
+  id: string,
+  menuList?: (MenuItem & { soldOut?: boolean; custom?: boolean })[],
+): (MenuItem & { soldOut?: boolean; custom?: boolean }) | undefined {
+  if (menuList) {
+    const match = menuList.find((m) => m.id === id)
+    if (match) return match
+  }
   return MENU_BY_ID.get(id)
 }

@@ -78,10 +78,15 @@ export function QrStudio() {
   return (
     <main className="mx-auto min-h-dvh max-w-5xl px-4 py-8 print:max-w-none print:p-0">
       <div className="print:hidden">
-        <Link href="/" className="flex w-fit items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="size-4" aria-hidden="true" />
-          Back to the menu
-        </Link>
+        <div className="flex items-center justify-between gap-4">
+          <Link href="/" className="flex w-fit items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            Back to the menu
+          </Link>
+          <Link href="/admin" className="text-sm font-medium text-primary hover:underline">
+            Staff Menu Studio →
+          </Link>
+        </div>
         <h1 className="mt-6 font-display text-4xl font-medium tracking-wide uppercase">Table QR Studio</h1>
         <p className="mt-2 max-w-xl leading-relaxed text-muted-foreground">
           Pick a table or the takeaway counter, then print the card. Guests who scan it land on the menu already set to

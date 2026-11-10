@@ -9,17 +9,51 @@ import { useOrder } from './order-provider'
 import { Sheet } from './sheet'
 
 export function ItemSheet({ item, onClose }: { item: MenuItem | null; onClose: () => void }) {
+  const { editingLine, setEditingLine, menu } = useOrder()
+  const editingItem = editingLine ? menu.find((m) => m.id === editingLine.itemId) ?? null : null
+  const activeItem = item ?? editingItem
+
+  const handleClose = () => {
+    if (editingLine) setEditingLine(null)
+    onClose()
+  }
+
   return (
-    <Sheet open={item !== null} onClose={onClose} label={item?.name ?? ''}>
-      {item ? <ItemForm key={item.id} item={item} onClose={onClose} /> : null}
+    <Sheet open={activeItem !== null} onClose={handleClose} label={activeItem?.name ?? ''}>
+      {activeItem ? (
+        <ItemForm
+          key={editingLine ? `edit-${editingLine.uid}` : activeItem.id}
+          item={activeItem}
+          initialSelections={editingLine?.selections}
+          initialQty={editingLine?.qty}
+          initialNotes={editingLine?.notes}
+          editUid={editingLine?.uid}
+          onClose={handleClose}
+        />
+      ) : null}
     </Sheet>
   )
 }
 
-function ItemForm({ item, onClose }: { item: MenuItem; onClose: () => void }) {
-  const { lang, t, addLine } = useOrder()
-  const [selections, setSelections] = useState<Selections>(() => defaultSelections(item))
-  const [qty, setQty] = useState(1)
+function ItemForm({
+  item,
+  initialSelections,
+  initialQty = 1,
+  initialNotes = '',
+  editUid,
+  onClose,
+}: {
+  item: MenuItem
+  initialSelections?: Selections
+  initialQty?: number
+  initialNotes?: string
+  editUid?: string
+  onClose: () => void
+}) {
+  const { lang, t, addLine, updateLine } = useOrder()
+  const [selections, setSelections] = useState<Selections>(() => initialSelections ?? defaultSelections(item))
+  const [qty, setQty] = useState(initialQty)
+  const [notes, setNotes] = useState(initialNotes)
   const complete = isComplete(item, selections)
 
   const toggle = (group: ModifierGroup, optionId: string) => {
@@ -96,6 +130,21 @@ function ItemForm({ item, onClose }: { item: MenuItem; onClose: () => void }) {
             </fieldset>
           )
         })}
+
+        <div className="flex flex-col gap-1.5 border-t border-dashed border-foreground/20 pt-4">
+          <label htmlFor={`notes-${item.id}`} className="text-xs font-medium text-muted-foreground">
+            {t.itemNotesLabel}
+          </label>
+          <input
+            id={`notes-${item.id}`}
+            type="text"
+            maxLength={100}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder={t.itemNotesPlaceholder}
+            className="h-11 rounded-xl border border-input bg-secondary px-3.5 text-sm placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring"
+          />
+        </div>
       </div>
 
       <div className="flex shrink-0 items-center gap-3 border-t border-border bg-card px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
@@ -125,12 +174,19 @@ function ItemForm({ item, onClose }: { item: MenuItem; onClose: () => void }) {
           type="button"
           disabled={!complete}
           onClick={() => {
-            addLine(item, selections, qty)
+            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+              navigator.vibrate([15])
+            }
+            if (editUid) {
+              updateLine(editUid, selections, qty, notes)
+            } else {
+              addLine(item, selections, qty, notes)
+            }
             onClose()
           }}
           className="flex h-12 min-w-0 flex-1 items-center justify-between gap-2 rounded-full bg-accent px-4 text-sm font-medium whitespace-nowrap text-accent-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <span className="truncate">{t.addToOrder}</span>
+          <span className="truncate">{editUid ? t.saveChanges : t.addToOrder}</span>
           <span className="tabular-nums">{formatIQD(unitPrice(item, selections) * qty)}</span>
         </button>
       </div>

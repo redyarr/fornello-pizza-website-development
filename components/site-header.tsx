@@ -1,16 +1,18 @@
 'use client'
 
-import { ShoppingBag, Utensils, X } from 'lucide-react'
+import { Bell, ShoppingBag, Utensils, X } from 'lucide-react'
 import { useState } from 'react'
 import { padTable } from '@/lib/order'
 import { ModeSwitcher } from './mode-switcher'
 import { useOrder } from './order-provider'
+import { ServiceRequestSheet } from './service-request-sheet'
 import { Sheet } from './sheet'
 import { Tricolor } from './tricolor'
 
 export function SiteHeader() {
   const { lang, mode, table, setLang, t } = useOrder()
   const [modeOpen, setModeOpen] = useState(false)
+  const [serviceOpen, setServiceOpen] = useState(false)
   const ModeIcon = mode === 'dine-in' ? Utensils : ShoppingBag
   const modeLabel = mode === 'dine-in' ? (table ? `${t.table} ${padTable(table)}` : t.dineIn) : t.takeaway
 
@@ -25,6 +27,18 @@ export function SiteHeader() {
         </a>
 
         <div className="flex items-center gap-1.5 sm:gap-2">
+          {mode === 'dine-in' && table ? (
+            <button
+              type="button"
+              onClick={() => setServiceOpen(true)}
+              className="flex h-9 items-center gap-1.5 rounded-full border border-accent/40 bg-accent/15 px-2.5 text-xs font-semibold text-accent hover:bg-accent/25 transition-colors sm:px-3 sm:text-sm"
+              title={t.serviceModalTitle}
+            >
+              <Bell className="size-3.5 shrink-0" aria-hidden="true" />
+              <span>{t.callWaiter}</span>
+            </button>
+          ) : null}
+
           <button
             type="button"
             onClick={() => setModeOpen(true)}
@@ -68,6 +82,8 @@ export function SiteHeader() {
           </button>
         </div>
       </Sheet>
+
+      <ServiceRequestSheet open={serviceOpen} onClose={() => setServiceOpen(false)} />
     </header>
   )
 }

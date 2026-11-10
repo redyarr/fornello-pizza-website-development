@@ -13,26 +13,30 @@
 ├── app/                        # Next.js App Router (Thin server/client shells)
 │   ├── globals.css             # Tailwind v4 theme, OKLCH tokens, base typography, RTL rules
 │   ├── layout.tsx              # Root HTML shell, Google Fonts (DM Sans, Oswald, Noto Sans Arabic)
+│   ├── manifest.ts             # Web App Manifest for mobile PWA standalone support
 │   ├── page.tsx                # Server Component root; parses searchParams -> OrderProvider
+│   ├── admin/page.tsx          # Staff Menu Studio route (PBKDF2 100k + Keyfile Token Auth)
 │   └── qr/page.tsx             # Staff Table QR Studio route (unindexed, print-ready)
 ├── components/                 # Domain-specific and layout components
 │   ├── cart-bar.tsx            # Floating bottom bar with safe-area padding & view switcher
 │   ├── hero.tsx                # Hero banner with RTL-flipped photography & quick mode switcher
-│   ├── item-sheet.tsx          # Item modifier & customization bottom sheet
-│   ├── menu-browser.tsx        # Search, filter tags, sticky category subnav with scroll-spy
-│   ├── menu-item-row.tsx       # Individual menu list item with badge tags & price
-│   ├── mode-switcher.tsx       # Dine-in vs Takeaway toggle and table picker
-│   ├── order-provider.tsx      # React Context holding cart, dining mode, language & URL sync
-│   ├── order-sheet.tsx         # Cart drawer with WhatsApp checkout & ticket triggering
+│   ├── item-sheet.tsx          # Item modifier & customization bottom sheet (add & inline re-edit)
+│   ├── menu-browser.tsx        # Search with quick clear, filter tags, sticky category scroll-spy
+│   ├── menu-item-row.tsx       # Individual menu list item with badge tags, price & sold-out badge
+│   ├── menu-manager.tsx        # Staff menu management studio (add items, 86/stock, JSON backup)
+│   ├── mode-switcher.tsx       # Dine-in vs Takeaway toggle, table picker & table share link
+│   ├── order-provider.tsx      # React Context holding cart, toasts, order history & URL sync
+│   ├── order-sheet.tsx         # Cart drawer with item re-edit, past orders, WhatsApp & ticket
 │   ├── qr-studio.tsx           # Printable QR generator for tables 1–25 and takeaway counter
 │   ├── sheet.tsx               # Reusable modal/bottom-sheet primitive using native <dialog>
-│   ├── site-footer.tsx         # Multilingual footer with contact details and staff link
+│   ├── site-footer.tsx         # Multilingual footer with Google Maps link & 5-tap stealth trigger
 │   ├── site-header.tsx         # Sticky header with brand, dining mode pill & language toggle
 │   ├── tricolor.tsx            # Italian tricolor accent bar (Basil, White, Terracotta)
-│   └── waiter-ticket.tsx       # High-contrast, full-screen inverted card for waiter/counter
+│   └── waiter-ticket.tsx       # High-contrast card with order ref, waiter call & thermal print
 ├── lib/                        # Pure business logic, types, data schemas, i18n
+│   ├── auth.ts                 # PBKDF2 (100k rounds) + Keyfile Token Auth + Lockout shield
 │   ├── i18n.ts                 # Bilingual dictionaries (en, ckb) & shop constants (SITE)
-│   ├── menu.ts                 # Menu item catalogue, modifier groups, add-on pricing, prep times
+│   ├── menu.ts                 # Menu item catalogue, modifier groups, add-on pricing, overrides
 │   ├── order.ts                # Calculation algorithms, receipt formatting, URL query serialization
 │   └── utils.ts                # Utility cn() combining clsx and tailwind-merge
 └── public/                     # Static media assets (optimized PNGs/SVGs)
@@ -212,10 +216,21 @@ Color coordinates are defined in `app/globals.css` using the perceptually unifor
 | Re-inventing state in sheets | Use `useOrder()` | Prevents desynchronization of cart and dining context |
 | `bg-gradient-to-r` | `bg-linear-to-r` | Tailwind CSS v4 syntax standard |
 | Direct `window.location.href = ...` for queries | `window.history.replaceState(...)` | Prevents page refresh on table/lang/mode change |
+| 4-digit numeric PINs for staff access | WebAuthn Passkeys, RFC 6238 TOTP, 256-bit Keycards, PBKDF2 | PINs have only 10,000 combinations and are trivially brute-forced in client environments |
 
 ---
 
-## 6. Verification Checklist Before Any Commit
+## 6. Zero-Backend Security Standards (`lib/auth.ts`)
+1. **No Client-Side PINs**: Never store or check 4-digit or 6-digit numeric static PINs in client code or `localStorage`.
+2. **WebAuthn Biometric Passkeys**: Provide 1-tap hardware enclave authentication (`Face ID`, `Touch ID`, `Windows Hello`) via `navigator.credentials`.
+3. **Dynamic TOTP (RFC 6238)**: 30-second rolling codes verified via client-side Web Crypto HMAC-SHA-1 against a base32 secret.
+4. **256-Bit Cryptographic Physical Keycards**: Staff tokens have 256 bits of entropy ($2^{256}$ space) and can be loaded via `.key` files or QR scanner.
+5. **100,000-Round PBKDF2**: Master passphrases must undergo 100,000 HMAC-SHA-256 iterations with salt before comparison.
+6. **Exponential Lockout Shield**: Enforce 3-attempt (30s), 5-attempt (5m), and 8-attempt (24h lockdown) thresholds to defeat client-side iteration.
+
+---
+
+## 7. Verification Checklist Before Any Commit
 - [ ] TypeScript strict check passes (`pnpm build` or `pnpm exec tsc --noEmit`).
 - [ ] Both English (`en`) and Kurdish (`ckb`) strings exist in `lib/i18n.ts`.
 - [ ] RTL layout behaves correctly when switching language.

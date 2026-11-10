@@ -4,7 +4,7 @@ import { getItem, MODIFIER_GROUPS, PREP_MINUTES, type Lang, type MenuItem } from
 export type Mode = 'dine-in' | 'takeaway'
 export type Pacing = 'now' | 'together' | 'after'
 export type Selections = Record<string, string[]>
-export type CartLine = { uid: string; itemId: string; qty: number; selections: Selections }
+export type CartLine = { uid: string; itemId: string; qty: number; selections: Selections; notes?: string }
 export type OrderParams = { mode: Mode; table: number | null; lang: Lang }
 
 export function formatIQD(amount: number): string {
@@ -97,19 +97,35 @@ export type ReceiptInput = {
   lines: CartLine[]
   pacing: Pacing
   customerName: string
+  customerPhone?: string
   note: string
+  orderRef?: string
 }
 
-export function buildReceipt({ lang, t, mode, table, lines, pacing, customerName, note }: ReceiptInput): string {
+export function buildReceipt({
+  lang,
+  t,
+  mode,
+  table,
+  lines,
+  pacing,
+  customerName,
+  customerPhone,
+  note,
+  orderRef,
+}: ReceiptInput): string {
   const siteTitle = lang === 'ckb' ? `${SITE.nameCkb} (${SITE.name})` : SITE.name
-  const out: string[] = [`*${siteTitle} — ${t.newOrder}*`]
+  const refHeader = orderRef ? ` [${orderRef}]` : ''
+  const out: string[] = [`*${siteTitle} — ${t.newOrder}${refHeader}*`]
   if (mode === 'dine-in') {
     const tableDisplay = table ? padTable(table) : lang === 'ckb' ? '؟' : '?'
     out.push(`${t.dineIn} · ${t.table} ${tableDisplay}`)
     if (needsPacing(lines)) out.push(`${t.coffeeService}: ${t.pacing[pacing]}`)
   } else {
     const name = customerName.trim()
-    out.push(name ? `${t.takeaway} · ${name}` : t.takeaway)
+    const phone = customerPhone?.trim()
+    const customerInfo = [name, phone].filter(Boolean).join(' · ')
+    out.push(customerInfo ? `${t.takeaway} · ${customerInfo}` : t.takeaway)
     const [low, high] = prepEstimate(lines)
     out.push(t.readyIn(low, high))
   }
@@ -119,6 +135,7 @@ export function buildReceipt({ lang, t, mode, table, lines, pacing, customerName
     if (!item) continue
     out.push(`${line.qty}× ${item.name} — ${formatIQD(lineTotal(line))}`)
     for (const detail of describeSelections(item, line.selections, lang)) out.push(`   · ${detail}`)
+    if (line.notes?.trim()) out.push(`   · 📝 ${line.notes.trim()}`)
   }
   if (note.trim()) out.push('', `${t.note}: ${note.trim()}`)
   out.push('', `*${t.total}: ${formatIQD(cartTotal(lines))}*`)
