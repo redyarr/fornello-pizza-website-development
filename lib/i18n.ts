@@ -9,7 +9,7 @@ export const SITE = {
   phoneHref: 'tel:+9647751252525',
   whatsappNumber: '9647751252525',
   tableCount: 25,
-  mapsUrl: 'https://maps.google.com/?q=Sulaymaniyah+Bashir+Mushir+Park+Piramagrun+Mosque',
+  mapsUrl: 'https://maps.google.com/?q=University+of+Sulaimani+Old+Campus+Sulaymaniyah',
 }
 
 const en = {
@@ -89,7 +89,7 @@ const en = {
   newOrder: 'New order',
   startNewOrder: 'Start a new order',
   findUs: 'Find us',
-  address: 'Sulaymaniyah, near Bashir Mushir Park & Piramagrun Mosque',
+  address: 'Sulaymaniyah — Near Old Campus of University of Sulaimani',
   call: 'Call',
   whatsapp: 'WhatsApp',
   staffQr: 'Staff · Table QR studio',
@@ -356,7 +356,7 @@ const ckb: Strings = {
   newOrder: 'داواکاریی نوێ',
   startNewOrder: 'دەستپێکردنی داواکارییەکی نوێ',
   findUs: 'ناونیشان و پەیوەندی',
-  address: 'سلێمانی، نزیک پارکی بەشیر موشیر و مزگەوتی پیرەمەگروون',
+  address: 'نزیک کەمپی کۆنی زانکۆی سلێمانی',
   call: 'پەیوەندی',
   whatsapp: 'واتسئاپ',
   staffQr: 'ستاف · دروستکردنی کۆدی مێزەکان (QR)',
