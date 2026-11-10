@@ -486,15 +486,21 @@ export function OrderProvider({ initial, children }: { initial: OrderParams; chi
         (l) => l.itemId === incoming.itemId && JSON.stringify(l.selections) === sig && l.notes === incoming.notes,
       )
       if (idx >= 0) {
-        mergedLines[idx] = { ...mergedLines[idx], qty: mergedLines[idx].qty + incoming.qty }
+        mergedLines[idx] = {
+          ...mergedLines[idx],
+          ...incoming,
+          uid: mergedLines[idx].uid,
+          qty: mergedLines[idx].qty + incoming.qty,
+        }
       } else {
         mergedLines.push(incoming)
       }
     }
 
     const finalRef = isSamePhoneTableSession && activePlacedOrder ? activePlacedOrder.orderRef : orderRef
-    const finalTotal =
+    const rawTotal =
       isSamePhoneTableSession && activePlacedOrder ? activePlacedOrder.total + orderTotal : orderTotal
+    const finalTotal = Math.max(rawTotal, cartTotal(mergedLines))
 
     const newRecord: PlacedOrder = {
       id: crypto.randomUUID(),
